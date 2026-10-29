@@ -1,0 +1,93 @@
+@model PaginatedList<AuditLog>
+@{
+    ViewData["Title"] = "Security & Operational Audit Logs";
+    var distinctActions = ViewBag.DistinctActions as List<string> ?? new List<string>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">System Audit Logs</h4>
+        <span class="text-muted small">Immutable audit trail of logins, price changes, sales, purchases, returns, adjustments, closings &amp; settings</span>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Search User / Entity / Details</label>
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Username, entity, invoice..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Action Type</label>
+                <select name="actionFilter" class="form-select form-select-sm">
+                    <option value="">All Actions</option>
+                    @foreach (var act in distinctActions)
+                    {
+                        <option value="@act" selected="@(ViewBag.ActionFilter == act)">@act</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">From Date</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">To Date</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Timestamp (UTC)</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Entity ID</th>
+                    <th>Old Value</th>
+                    <th>New Value / Summary</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">No audit log entries found.</td></tr>
+                }
+                @foreach (var log in Model)
+                {
+                    <tr>
+                        <td class="text-nowrap">@log.Timestamp.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                        <td class="fw-semibold">@log.Username</td>
+                        <td><span class="badge bg-light text-dark border">@log.Action</span></td>
+                        <td>@log.EntityName</td>
+                        <td><code>@(log.EntityId ?? "-")</code></td>
+                        <td class="small text-muted">@(log.OldValue ?? "-")</td>
+                        <td class="small fw-medium">@(log.NewValue ?? "-")</td>
+                        <td class="small text-muted">@(log.IpAddress ?? "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
+            <span class="small text-muted">Page @Model.PageIndex of @Model.TotalPages (@Model.TotalCount audit logs)</span>
+            <div class="btn-group btn-group-sm">
+                <a asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-search="@ViewBag.Search" asp-route-actionFilter="@ViewBag.ActionFilter" class="btn btn-outline-secondary @(!Model.HasPreviousPage ? "disabled" : "")">Previous</a>
+                <a asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-search="@ViewBag.Search" asp-route-actionFilter="@ViewBag.ActionFilter" class="btn btn-outline-secondary @(!Model.HasNextPage ? "disabled" : "")">Next</a>
+            </div>
+        </div>
+    }
+</div>

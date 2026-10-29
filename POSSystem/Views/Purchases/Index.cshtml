@@ -1,0 +1,86 @@
+@model PaginatedList<GoodsReceipt>
+@{
+    ViewData["Title"] = "Purchases";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0">Purchases &amp; Supplier Invoices</h4>
+        <span class="text-muted small">Completed purchases and goods receipts with supplier payables and payment status</span>
+    </div>
+    <div class="d-flex gap-2">
+        @if (User.HasPermission(PermissionCodes.ReceiveGoods))
+        {
+            <a asp-controller="GoodsReceiving" asp-action="Create" class="btn btn-primary btn-sm fw-semibold">
+                <i class="bi bi-plus-lg me-1"></i> New Purchase / Receive Goods
+            </a>
+        }
+        <a asp-controller="PurchaseOrders" asp-action="Index" class="btn btn-outline-secondary btn-sm">Purchase Orders</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="GRN # / Supplier Invoice..." />
+            </div>
+            <div class="col-md-3">
+                <select name="supplierId" asp-items="@ViewBag.Suppliers" class="form-select form-select-sm">
+                    <option value="">All Suppliers</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>GRN #</th>
+                    <th>Supplier</th>
+                    <th>PO Ref</th>
+                    <th>Date</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Paid</th>
+                    <th class="text-end">Due</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var g in Model)
+                {
+                    <tr>
+                        <td class="fw-bold"><a asp-controller="GoodsReceiving" asp-action="Details" asp-route-id="@g.Id" class="text-decoration-none">@g.GRNNumber</a></td>
+                        <td>@g.Supplier?.CompanyName</td>
+                        <td>@(g.PurchaseOrder?.PONumber ?? "Direct Purchase")</td>
+                        <td>@g.ReceivingDate.ToString("yyyy-MM-dd")</td>
+                        <td class="text-end fw-bold">@g.TotalAmount.ToString("N2")</td>
+                        <td class="text-end text-success">@g.PaidAmount.ToString("N2")</td>
+                        <td class="text-end @(g.DueAmount > 0 ? "text-danger fw-bold" : "text-muted")">@g.DueAmount.ToString("N2")</td>
+                        <td><span class="badge bg-success">@g.Status</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-controller="GoodsReceiving" asp-action="Details" asp-route-id="@g.Id" class="btn btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                <a asp-controller="PurchaseReturns" asp-action="Create" asp-route-goodsReceiptId="@g.Id" class="btn btn-outline-warning text-dark" title="Purchase Return"><i class="bi bi-arrow-return-left"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

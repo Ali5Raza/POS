@@ -1,0 +1,109 @@
+@model PaginatedList<StockMovement>
+@{
+    ViewData["Title"] = "Stock Ledger";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Stock Ledger (Audit Trail of All Inventory Movements)</h4>
+        <span class="text-muted small">Every stock change is recorded with transaction type, reference, quantity in/out, running balance, cost and user</span>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Inventory Valuation</a>
+        @if (User.HasPermission(PermissionCodes.AdjustInventory))
+        {
+            <a asp-action="Adjustments" class="btn btn-primary btn-sm fw-semibold">Stock Adjustments</a>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Product</label>
+                <select name="productId" asp-items="@ViewBag.Products" class="form-select form-select-sm">
+                    <option value="">All Products</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Transaction Type</label>
+                <select name="transactionType" class="form-select form-select-sm">
+                    <option value="">All Types</option>
+                    <option value="Opening Stock" selected="@(ViewBag.TransactionType == "Opening Stock")">Opening Stock</option>
+                    <option value="Purchase" selected="@(ViewBag.TransactionType == "Purchase")">Purchase (GRN)</option>
+                    <option value="Purchase Return" selected="@(ViewBag.TransactionType == "Purchase Return")">Purchase Return</option>
+                    <option value="Sale" selected="@(ViewBag.TransactionType == "Sale")">Sale</option>
+                    <option value="Sales Return" selected="@(ViewBag.TransactionType == "Sales Return")">Sales Return</option>
+                    <option value="Adjustment In" selected="@(ViewBag.TransactionType == "Adjustment In")">Adjustment In</option>
+                    <option value="Adjustment Out" selected="@(ViewBag.TransactionType == "Adjustment Out")">Adjustment Out</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Reference / Search</label>
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="INV, GRN, ADJ..." />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">From Date</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter Ledger</button>
+                <a asp-action="Ledger" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Date / Time</th>
+                    <th>Product</th>
+                    <th>Transaction Type</th>
+                    <th>Reference #</th>
+                    <th class="text-end">Quantity In</th>
+                    <th class="text-end">Quantity Out</th>
+                    <th class="text-end">Balance</th>
+                    <th class="text-end">Unit Cost</th>
+                    <th>User</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">No stock movements found matching criteria.</td></tr>
+                }
+                @foreach (var m in Model)
+                {
+                    <tr>
+                        <td>@m.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>
+                            <div class="fw-semibold">@m.Product?.Name</div>
+                            <small class="text-muted">@m.Product?.SKU</small>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">@m.TransactionType</span></td>
+                        <td class="fw-bold">@m.ReferenceNumber</td>
+                        <td class="text-end text-success fw-bold">@(m.QuantityIn > 0 ? $"+{m.QuantityIn:N0}" : "-")</td>
+                        <td class="text-end text-danger fw-bold">@(m.QuantityOut > 0 ? $"-{m.QuantityOut:N0}" : "-")</td>
+                        <td class="text-end fw-extrabold">@m.BalanceAfter.ToString("N0")</td>
+                        <td class="text-end">@m.UnitCost.ToString("N2")</td>
+                        <td>@(m.User?.Username ?? "System")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
+            <span class="small text-muted">Page @Model.PageIndex of @Model.TotalPages (@Model.TotalCount ledger entries)</span>
+            <div class="btn-group btn-group-sm">
+                <a asp-action="Ledger" asp-route-page="@(Model.PageIndex - 1)" asp-route-productId="@ViewBag.ProductId" asp-route-transactionType="@ViewBag.TransactionType" class="btn btn-outline-secondary @(!Model.HasPreviousPage ? "disabled" : "")">Previous</a>
+                <a asp-action="Ledger" asp-route-page="@(Model.PageIndex + 1)" asp-route-productId="@ViewBag.ProductId" asp-route-transactionType="@ViewBag.TransactionType" class="btn btn-outline-secondary @(!Model.HasNextPage ? "disabled" : "")">Next</a>
+            </div>
+        </div>
+    }
+</div>

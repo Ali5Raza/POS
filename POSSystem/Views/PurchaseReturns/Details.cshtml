@@ -1,0 +1,77 @@
+@model PurchaseReturn
+@{
+    ViewData["Title"] = $"Purchase Return {Model.ReturnNumber}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Purchase Return: @Model.ReturnNumber</h4>
+        <span class="text-muted small">Against GRN <a asp-controller="GoodsReceiving" asp-action="Details" asp-route-id="@Model.GoodsReceiptId">@Model.GoodsReceipt?.GRNNumber</a> | Supplier: @Model.Supplier?.CompanyName</span>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print</button>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to List</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">Returned Items</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Return Qty</th>
+                            <th class="text-end">Unit Cost</th>
+                            <th class="text-end">Adjustment Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@item.Product?.Name</div>
+                                    <small class="text-muted">@item.Product?.SKU</small>
+                                </td>
+                                <td class="text-end fw-bold">@item.ReturnQuantity.ToString("N0")</td>
+                                <td class="text-end">@item.UnitCost.ToString("N2")</td>
+                                <td class="text-end fw-bold text-danger">@item.RefundAmount.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">Return Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Supplier:</span>
+                    <span class="fw-semibold">@Model.Supplier?.CompanyName</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Return Date:</span>
+                    <span>@Model.ReturnDate.ToString("yyyy-MM-dd")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Reason:</span>
+                    <span>@Model.Reason</span>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between fs-5 fw-bold text-danger">
+                    <span>Total Adjustment:</span>
+                    <span>@Model.TotalReturnAmount.ToString("N2")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

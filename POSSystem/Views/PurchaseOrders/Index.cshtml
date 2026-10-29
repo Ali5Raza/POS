@@ -1,0 +1,96 @@
+@model PaginatedList<PurchaseOrder>
+@{
+    ViewData["Title"] = "Purchase Orders";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Purchase Orders</h4>
+        <span class="text-muted small">Create supplier orders, track delivery status and convert to Goods Receiving (GRN)</span>
+    </div>
+    @if (User.HasPermission(PermissionCodes.CreatePurchase))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-sm fw-semibold">
+            <i class="bi bi-plus-lg me-1"></i> Create Purchase Order
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Search PO # or Supplier..." />
+            </div>
+            <div class="col-md-3">
+                <select name="supplierId" asp-items="@ViewBag.Suppliers" class="form-select form-select-sm">
+                    <option value="">All Suppliers</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    <option value="Draft" selected="@(ViewBag.Status == "Draft")">Draft</option>
+                    <option value="Ordered" selected="@(ViewBag.Status == "Ordered")">Ordered</option>
+                    <option value="PartiallyReceived" selected="@(ViewBag.Status == "PartiallyReceived")">Partially Received</option>
+                    <option value="FullyReceived" selected="@(ViewBag.Status == "FullyReceived")">Fully Received</option>
+                    <option value="Cancelled" selected="@(ViewBag.Status == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>PO Number</th>
+                    <th>Supplier</th>
+                    <th>Order Date</th>
+                    <th>Expected Delivery</th>
+                    <th>Items</th>
+                    <th class="text-end">Total Amount</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">No purchase orders found.</td></tr>
+                }
+                @foreach (var po in Model)
+                {
+                    <tr>
+                        <td class="fw-bold"><a asp-action="Details" asp-route-id="@po.Id" class="text-decoration-none">@po.PONumber</a></td>
+                        <td>@po.Supplier?.CompanyName</td>
+                        <td>@po.OrderDate.ToString("yyyy-MM-dd")</td>
+                        <td>@(po.ExpectedDeliveryDate?.ToString("yyyy-MM-dd") ?? "-")</td>
+                        <td>@po.Items.Count</td>
+                        <td class="text-end fw-bold">@po.TotalAmount.ToString("N2")</td>
+                        <td>
+                            <span class="badge @(po.Status == "FullyReceived" ? "bg-success" : po.Status == "Cancelled" ? "bg-danger" : "bg-primary")">@po.Status</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@po.Id" class="btn btn-outline-primary"><i class="bi bi-eye"></i> View</a>
+                                @if (po.Status != "FullyReceived" && po.Status != "Cancelled" && User.HasPermission(PermissionCodes.ReceiveGoods))
+                                {
+                                    <a asp-controller="GoodsReceiving" asp-action="Create" asp-route-purchaseOrderId="@po.Id" class="btn btn-success" title="Convert PO to GRN">
+                                        <i class="bi bi-box-arrow-in-down"></i> Receive GRN
+                                    </a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

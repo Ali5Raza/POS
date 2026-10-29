@@ -1,0 +1,163 @@
+@model MonthlyClosingViewModel
+@{
+    ViewData["Title"] = "Monthly Closing";
+    var monthName = new DateTime(Model.Year, Model.Month, 1).ToString("MMMM yyyy");
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0">Monthly Accounting Period Closing</h4>
+        <span class="text-muted small">Consolidated P&amp;L, receivables, payables, inventory valuation &amp; period lock for @monthName</span>
+    </div>
+    <form method="get" class="d-flex align-items-center gap-2">
+        <select name="year" class="form-select form-select-sm" style="width: 100px;">
+            @for (int y = DateTime.UtcNow.Year - 1; y <= DateTime.UtcNow.Year + 1; y++)
+            {
+                <option value="@y" selected="@(Model.Year == y)">@y</option>
+            }
+        </select>
+        <select name="month" class="form-select form-select-sm" style="width: 130px;">
+            @for (int m = 1; m <= 12; m++)
+            {
+                <option value="@m" selected="@(Model.Month == m)">@(new DateTime(2026, m, 1).ToString("MMMM"))</option>
+            }
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Load Period</button>
+    </form>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Total Sales</div>
+            <div class="kpi-value text-primary">@Model.TotalSales.ToString("N2")</div>
+            <div class="small text-muted">Sales Returns: @Model.SalesReturns.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Total Purchases (GRN)</div>
+            <div class="kpi-value text-info">@Model.TotalPurchases.ToString("N2")</div>
+            <div class="small text-muted">Purchase Returns: @Model.PurchaseReturns.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Gross Profit</div>
+            <div class="kpi-value text-success">@Model.GrossProfit.ToString("N2")</div>
+            <div class="small text-muted">Expenses: @Model.TotalExpenses.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Net Profit</div>
+            <div class="kpi-value @(Model.NetProfit >= 0 ? "text-success" : "text-danger")">@Model.NetProfit.ToString("N2")</div>
+            <div class="small text-muted">Cash Summary: @Model.CashSummary.ToString("N2")</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Period Position: @monthName</h6>
+                <span class="badge @(Model.IsAlreadyClosed ? "bg-danger" : "bg-success")">
+                    @(Model.IsAlreadyClosed ? "PERIOD CLOSED" : "OPEN PERIOD")
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Customer Receivables:</span>
+                    <strong class="text-danger">@Model.Receivables.ToString("N2")</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Supplier Payables:</span>
+                    <strong class="text-warning text-dark">@Model.Payables.ToString("N2")</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Closing Inventory Value:</span>
+                    <strong class="text-primary">@Model.InventoryValue.ToString("N2")</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="text-muted">Net Cash Flow Summary:</span>
+                    <strong>@Model.CashSummary.ToString("N2")</strong>
+                </div>
+
+                @if (!Model.IsAlreadyClosed)
+                {
+                    <form asp-action="Close" method="post" onsubmit="return confirm('Finalize Monthly Closing for @monthName? Normal users will be blocked from modifying accounting transactions in this month.');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="year" value="@Model.Year" />
+                        <input type="hidden" name="month" value="@Model.Month" />
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Closing Remarks</label>
+                            <input type="text" name="notes" class="form-control form-control-sm" placeholder="Monthly closing sign-off notes..." />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                            <i class="bi bi-lock-fill me-1"></i> Finalize Monthly Closing (@monthName)
+                        </button>
+                    </form>
+                }
+                else if (Model.ExistingRecord != null)
+                {
+                    <div class="alert alert-secondary small mb-3">
+                        Closed on @Model.ExistingRecord.ClosingDate.ToString("yyyy-MM-dd HH:mm") by <strong>@(Model.ExistingRecord.ClosedByUser?.Username ?? "Admin")</strong>
+                    </div>
+                    <form asp-action="Reopen" method="post" onsubmit="return confirm('Reopen this closed accounting month?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.ExistingRecord.Id" />
+                        <input type="hidden" name="year" value="@Model.Year" />
+                        <input type="hidden" name="month" value="@Model.Month" />
+                        <button type="submit" class="btn btn-outline-warning text-dark w-100 fw-bold">
+                            <i class="bi bi-unlock-fill me-1"></i> Reopen Accounting Month (Admin)
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">Monthly Closing Archive</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th class="text-end">Total Sales</th>
+                            <th class="text-end">Purchases</th>
+                            <th class="text-end">Net Profit</th>
+                            <th class="text-end">Inventory Value</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.PastClosings.Any())
+                        {
+                            <tr><td colspan="7" class="text-center text-muted py-4">No monthly closings finalized yet.</td></tr>
+                        }
+                        @foreach (var mc in Model.PastClosings)
+                        {
+                            <tr>
+                                <td class="fw-bold">@mc.Year-@mc.Month.ToString("D2")</td>
+                                <td class="text-end">@mc.TotalSales.ToString("N2")</td>
+                                <td class="text-end">@mc.TotalPurchases.ToString("N2")</td>
+                                <td class="text-end fw-bold @(mc.NetProfit >= 0 ? "text-success" : "text-danger")">@mc.NetProfit.ToString("N2")</td>
+                                <td class="text-end">@mc.InventoryValue.ToString("N2")</td>
+                                <td><span class="badge @(mc.Status == "Closed" ? "bg-danger" : "bg-warning text-dark")">@mc.Status</span></td>
+                                <td class="text-end">
+                                    <a asp-action="Index" asp-route-year="@mc.Year" asp-route-month="@mc.Month" class="btn btn-sm btn-outline-primary py-0 px-2">View</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,109 @@
+@model ProductCreateViewModel
+@{
+    ViewData["Title"] = "Add Product";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Add New Product</h4>
+        <span class="text-muted small">Configure product identifiers, pricing tiers, tax rate and opening inventory</span>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to Products</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+        <form asp-action="Create" method="post" class="row g-3">
+            @Html.AntiForgeryToken()
+
+            <div class="col-md-3">
+                <label asp-for="SKU" class="form-label small fw-bold">SKU *</label>
+                <input asp-for="SKU" class="form-control" required />
+                <span asp-validation-for="SKU" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Barcode" class="form-label small fw-bold">Barcode *</label>
+                <input asp-for="Barcode" class="form-control" required />
+                <span asp-validation-for="Barcode" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Name" class="form-label small fw-bold">Product Name *</label>
+                <input asp-for="Name" class="form-control" placeholder="e.g., Nescafe Classic 200g Jar" required />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="CategoryId" class="form-label small fw-bold">Category *</label>
+                <select asp-for="CategoryId" asp-items="@ViewBag.Categories" class="form-select" required>
+                    <option value="">-- Select Category --</option>
+                </select>
+                <span asp-validation-for="CategoryId" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="DefaultSupplierId" class="form-label small fw-bold">Default Supplier</label>
+                <select asp-for="DefaultSupplierId" asp-items="@ViewBag.Suppliers" class="form-select">
+                    <option value="">-- Optional Supplier --</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label asp-for="Unit" class="form-label small fw-bold">Unit *</label>
+                <input asp-for="Unit" class="form-control" placeholder="pcs, pack, kg, btl" required />
+            </div>
+            <div class="col-md-2">
+                <label asp-for="TaxRate" class="form-label small fw-bold">Tax Rate (%)</label>
+                <input asp-for="TaxRate" type="number" step="0.01" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="CostPrice" class="form-label small fw-bold">Cost Price *</label>
+                <input asp-for="CostPrice" type="number" step="0.01" class="form-control" required />
+                <span asp-validation-for="CostPrice" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="SalePrice" class="form-label small fw-bold">Retail Sale Price *</label>
+                <input asp-for="SalePrice" type="number" step="0.01" class="form-control" required />
+                <span asp-validation-for="SalePrice" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="WholesalePrice" class="form-label small fw-bold">Wholesale Price</label>
+                <input asp-for="WholesalePrice" type="number" step="0.01" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="MinimumSalePrice" class="form-label small fw-bold">Minimum Sale Price</label>
+                <input asp-for="MinimumSalePrice" type="number" step="0.01" class="form-control" />
+            </div>
+
+            <div class="col-md-4">
+                <label asp-for="OpeningStock" class="form-label small fw-bold">Opening Stock (Creates Ledger Entry)</label>
+                <input asp-for="OpeningStock" type="number" step="1" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="MinimumStockLevel" class="form-label small fw-bold">Minimum Stock Alert Level</label>
+                <input asp-for="MinimumStockLevel" type="number" step="1" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="ReorderLevel" class="form-label small fw-bold">Reorder Level</label>
+                <input asp-for="ReorderLevel" type="number" step="1" class="form-control" />
+            </div>
+
+            <div class="col-md-9">
+                <label asp-for="Description" class="form-label small fw-bold">Description</label>
+                <input asp-for="Description" class="form-control" />
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label fw-semibold">Active for POS Sale</label>
+                </div>
+            </div>
+
+            <div class="col-12 d-flex justify-content-end gap-2 pt-2 border-top">
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary fw-bold px-4">
+                    <i class="bi bi-check-lg me-1"></i> Create Product
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

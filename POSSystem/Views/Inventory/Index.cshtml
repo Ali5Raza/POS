@@ -1,0 +1,123 @@
+@model PaginatedList<Product>
+@{
+    ViewData["Title"] = "Inventory Valuation & Stock";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0">Inventory &amp; Stock Valuation</h4>
+        <span class="text-muted small">Monitor current stock, reorder levels, cost valuation and retail valuation across all products</span>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Ledger" class="btn btn-outline-primary btn-sm fw-semibold">
+            <i class="bi bi-journal-text me-1"></i> Stock Ledger
+        </a>
+        @if (User.HasPermission(PermissionCodes.AdjustInventory))
+        {
+            <a asp-action="Adjustments" class="btn btn-primary btn-sm fw-semibold">
+                <i class="bi bi-sliders me-1"></i> Stock Adjustment
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Valuation Summary Strip -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Total Stock Value (Cost)</div>
+            <div class="kpi-value text-primary">@(((decimal)(ViewBag.TotalCostValuation ?? 0m)).ToString("N2"))</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Total Retail Value</div>
+            <div class="kpi-value text-success">@(((decimal)(ViewBag.TotalRetailValuation ?? 0m)).ToString("N2"))</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Low Stock Items</div>
+            <div class="kpi-value text-warning">@ViewBag.LowStockCount</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Out of Stock Items</div>
+            <div class="kpi-value text-danger">@ViewBag.OutOfStockCount</div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Search Product, SKU, Barcode..." />
+            </div>
+            <div class="col-md-3">
+                <select name="categoryId" asp-items="@ViewBag.Categories" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="stockFilter" class="form-select form-select-sm">
+                    <option value="">All Stock Statuses</option>
+                    <option value="low" selected="@(ViewBag.StockFilter == "low")">Low Stock</option>
+                    <option value="out" selected="@(ViewBag.StockFilter == "out")">Out of Stock</option>
+                    <option value="reorder" selected="@(ViewBag.StockFilter == "reorder")">At / Below Reorder Level</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Barcode</th>
+                    <th class="text-end">Current Stock</th>
+                    <th class="text-end">Min Stock</th>
+                    <th class="text-end">Reorder Level</th>
+                    <th class="text-end">Unit Cost</th>
+                    <th class="text-end">Stock Value</th>
+                    <th class="text-end">Retail Value</th>
+                    <th class="text-end">Ledger</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    var stockVal = Math.Max(0, p.CurrentStock) * p.CostPrice;
+                    var retailVal = Math.Max(0, p.CurrentStock) * p.SalePrice;
+                    <tr>
+                        <td class="fw-semibold">@p.Name</td>
+                        <td>@p.SKU</td>
+                        <td><small class="text-muted">@p.Barcode</small></td>
+                        <td class="text-end fw-bold @(p.CurrentStock <= 0 ? "text-danger" : p.CurrentStock <= p.MinimumStockLevel ? "text-warning" : "text-success")">
+                            @p.CurrentStock.ToString("N0") @p.Unit
+                        </td>
+                        <td class="text-end">@p.MinimumStockLevel.ToString("N0")</td>
+                        <td class="text-end">@p.ReorderLevel.ToString("N0")</td>
+                        <td class="text-end">@p.CostPrice.ToString("N2")</td>
+                        <td class="text-end fw-bold">@stockVal.ToString("N2")</td>
+                        <td class="text-end text-primary fw-semibold">@retailVal.ToString("N2")</td>
+                        <td class="text-end">
+                            <a asp-action="Ledger" asp-route-productId="@p.Id" class="btn btn-sm btn-outline-secondary py-0 px-2">
+                                <i class="bi bi-journal-text"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

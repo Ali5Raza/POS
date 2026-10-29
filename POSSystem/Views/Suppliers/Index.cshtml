@@ -1,0 +1,77 @@
+@model PaginatedList<Supplier>
+@{
+    ViewData["Title"] = "Suppliers";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Suppliers Directory</h4>
+        <span class="text-muted small">Manage vendor contacts, NTN/CNIC numbers, payable balances and supplier ledgers</span>
+    </div>
+    @if (User.HasPermission(PermissionCodes.CreatePurchase))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-sm fw-semibold">
+            <i class="bi bi-plus-lg me-1"></i> Add Supplier
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-9">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Search supplier by company, contact person, phone or NTN..." />
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Search</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Company Name</th>
+                    <th>Contact Person</th>
+                    <th>Phone / Email</th>
+                    <th>NTN / CNIC</th>
+                    <th class="text-end">Payable Balance</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in Model)
+                {
+                    <tr>
+                        <td class="fw-bold"><a asp-action="Details" asp-route-id="@s.Id" class="text-decoration-none">@s.CompanyName</a></td>
+                        <td>@s.Name</td>
+                        <td>
+                            <div>@s.Phone</div>
+                            <small class="text-muted">@s.Email</small>
+                        </td>
+                        <td>@(s.TaxNumber ?? "-")</td>
+                        <td class="text-end fw-bold @(s.CurrentBalance > 0 ? "text-danger" : "text-success")">@s.CurrentBalance.ToString("N2")</td>
+                        <td><span class="badge @(s.IsActive ? "bg-success" : "bg-secondary")">@(s.IsActive ? "Active" : "Inactive")</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-outline-primary" title="Supplier Ledger"><i class="bi bi-journal-text"></i> Ledger</a>
+                                <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                @if (s.CurrentBalance > 0 && User.HasPermission(PermissionCodes.CreatePayment))
+                                {
+                                    <a asp-controller="Payments" asp-action="Create" asp-route-supplierId="@s.Id" asp-route-paymentType="SupplierPayment" class="btn btn-outline-success" title="Pay Supplier">
+                                        <i class="bi bi-cash"></i> Pay
+                                    </a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,185 @@
+@model SettingsViewModel
+@{
+    ViewData["Title"] = "System Settings";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">System &amp; Business Settings</h4>
+        <span class="text-muted small">Configure Business Identity, POS Rules, Inventory Policies, Tax Rates &amp; Document Numbering Prefixes</span>
+    </div>
+</div>
+
+<form asp-action="Index" method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+
+    <div class="row g-3">
+        <!-- Business Settings -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-shop me-2 text-primary"></i>1. Business Profile &amp; Invoice Header</h6>
+                </div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="BusinessName" class="form-label small fw-bold">Business Name *</label>
+                        <input asp-for="BusinessName" class="form-control form-control-sm" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="TaxNumber" class="form-label small fw-bold">NTN / Tax Registration #</label>
+                        <input asp-for="TaxNumber" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="BusinessPhone" class="form-label small fw-bold">Phone</label>
+                        <input asp-for="BusinessPhone" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="BusinessEmail" class="form-label small fw-bold">Email</label>
+                        <input asp-for="BusinessEmail" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="BusinessAddress" class="form-label small fw-bold">Store Address</label>
+                        <input asp-for="BusinessAddress" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="BusinessLogo" class="form-label small fw-bold">Logo Path / URL</label>
+                        <input asp-for="BusinessLogo" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="InvoiceFooter" class="form-label small fw-bold">Invoice &amp; Thermal Receipt Footer Message</label>
+                        <textarea asp-for="InvoiceFooter" class="form-control form-control-sm" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- POS & Tax Settings -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-upc-scan me-2 text-success"></i>2. POS Terminal &amp; Tax Rules</h6>
+                </div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="DefaultCustomer" class="form-label small fw-bold">Default POS Customer</label>
+                        <input asp-for="DefaultCustomer" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DefaultPaymentMethod" class="form-label small fw-bold">Default Payment Method</label>
+                        <select asp-for="DefaultPaymentMethod" class="form-select form-select-sm">
+                            <option value="Cash">Cash</option>
+                            <option value="Card">Card</option>
+                            <option value="Bank Transfer">Bank Transfer</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ReceiptFormat" class="form-label small fw-bold">Default Receipt Print Format</label>
+                        <select asp-for="ReceiptFormat" class="form-select form-select-sm">
+                            <option value="Thermal">Thermal Printer (80mm)</option>
+                            <option value="A4">A4 Full Tax Invoice</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="MaximumDiscountPercent" class="form-label small fw-bold">Max Normal Cashier Discount (%)</label>
+                        <input asp-for="MaximumDiscountPercent" type="number" step="0.5" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DefaultTaxRate" class="form-label small fw-bold">Default Tax Rate (%)</label>
+                        <input asp-for="DefaultTaxRate" type="number" step="0.1" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-6 d-flex flex-column justify-content-center gap-1 pt-2">
+                        <div class="form-check">
+                            <input asp-for="EnableTax" class="form-check-input" />
+                            <label asp-for="EnableTax" class="form-check-label small fw-semibold">Enable Tax Calculation</label>
+                        </div>
+                        <div class="form-check">
+                            <input asp-for="AutoPrint" class="form-check-input" />
+                            <label asp-for="AutoPrint" class="form-check-label small fw-semibold">Auto-Print Receipt on Sale</label>
+                        </div>
+                    </div>
+                    <div class="col-12 border-top pt-2 d-flex flex-wrap gap-4">
+                        <div class="form-check">
+                            <input asp-for="AllowNegativeStock" class="form-check-input" />
+                            <label asp-for="AllowNegativeStock" class="form-check-label small fw-bold text-danger">Allow Negative Stock Sales</label>
+                        </div>
+                        <div class="form-check">
+                            <input asp-for="RequireCustomerForCreditSale" class="form-check-input" />
+                            <label asp-for="RequireCustomerForCreditSale" class="form-check-label small fw-semibold">Require Registered Customer for Credit Sale</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inventory & Numbering Prefixes -->
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-boxes me-2 text-info"></i>3. Inventory Defaults</h6>
+                </div>
+                <div class="card-body row g-3">
+                    <div class="col-md-4">
+                        <label asp-for="DefaultMinimumStock" class="form-label small fw-bold">Default Min Stock</label>
+                        <input asp-for="DefaultMinimumStock" type="number" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="DefaultReorderLevel" class="form-label small fw-bold">Default Reorder</label>
+                        <input asp-for="DefaultReorderLevel" type="number" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="NegativeStockPolicy" class="form-label small fw-bold">Negative Policy</label>
+                        <select asp-for="NegativeStockPolicy" class="form-select form-select-sm">
+                            <option value="Block">Strict Block</option>
+                            <option value="Warn">Warn Only</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-hash me-2 text-secondary"></i>4. Document Numbering Prefixes</h6>
+                </div>
+                <div class="card-body row g-2">
+                    <div class="col-md-3 col-6">
+                        <label asp-for="Prefix_INV" class="form-label small fw-bold">Sales Invoice</label>
+                        <input asp-for="Prefix_INV" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label asp-for="Prefix_PO" class="form-label small fw-bold">Purchase Order</label>
+                        <input asp-for="Prefix_PO" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label asp-for="Prefix_GRN" class="form-label small fw-bold">Goods Receipt</label>
+                        <input asp-for="Prefix_GRN" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <label asp-for="Prefix_PR" class="form-label small fw-bold">Purchase Return</label>
+                        <input asp-for="Prefix_PR" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <label asp-for="Prefix_SR" class="form-label small fw-bold">Sales Return</label>
+                        <input asp-for="Prefix_SR" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <label asp-for="Prefix_PAY" class="form-label small fw-bold">Payment Voucher</label>
+                        <input asp-for="Prefix_PAY" class="form-control form-control-sm" />
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <label asp-for="Prefix_EXP" class="form-label small fw-bold">Expense Voucher</label>
+                        <input asp-for="Prefix_EXP" class="form-control form-control-sm" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3 text-end">
+        <button type="submit" class="btn btn-primary fw-bold px-5 py-2">
+            <i class="bi bi-save me-1"></i> Save All System Settings
+        </button>
+    </div>
+</form>

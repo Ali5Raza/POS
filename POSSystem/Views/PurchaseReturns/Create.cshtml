@@ -1,0 +1,139 @@
+@model PurchaseReturnViewModel
+@{
+    ViewData["Title"] = "Create Purchase Return";
+    var grns = ViewBag.GoodsReceipts as List<GoodsReceipt> ?? new List<GoodsReceipt>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Process Purchase Return</h4>
+        <span class="text-muted small">Select original GRN &rarr; enter return quantities &rarr; confirm stock decrease &amp; supplier balance adjustment</span>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to Returns</a>
+</div>
+
+<div class="card mb-3 bg-light">
+    <div class="card-body py-2">
+        <form method="get" asp-action="Create" class="row g-2 align-items-center">
+            <div class="col-md-9">
+                <select name="goodsReceiptId" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @foreach (var g in grns)
+                    {
+                        <option value="@g.Id" selected="@(Model.GoodsReceiptId == g.Id)">
+                            @g.GRNNumber - @g.Supplier?.CompanyName (@g.ReceivingDate.ToString("yyyy-MM-dd")) - Total: @g.TotalAmount.ToString("N2")
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Load GRN Items</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.GoodsReceiptId > 0)
+{
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="GoodsReceiptId" />
+        <input type="hidden" asp-for="GRNNumber" />
+        <input type="hidden" asp-for="SupplierId" />
+        <input type="hidden" asp-for="SupplierName" />
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">Items from GRN <span class="text-primary">@Model.GRNNumber</span> (@Model.SupplierName)</h6>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Received Qty</th>
+                                    <th class="text-end">Already Returned</th>
+                                    <th class="text-end">Max Returnable</th>
+                                    <th class="text-end">Unit Cost</th>
+                                    <th class="text-center" style="width: 130px;">Return Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Items.Count; i++)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="hidden" asp-for="Items[i].GoodsReceiptItemId" />
+                                            <input type="hidden" asp-for="Items[i].ProductId" />
+                                            <input type="hidden" asp-for="Items[i].ProductName" />
+                                            <input type="hidden" asp-for="Items[i].SKU" />
+                                            <input type="hidden" asp-for="Items[i].ReceivedQuantity" />
+                                            <input type="hidden" asp-for="Items[i].AlreadyReturnedQuantity" />
+                                            <input type="hidden" asp-for="Items[i].UnitCost" />
+                                            <div class="fw-semibold">@Model.Items[i].ProductName</div>
+                                            <small class="text-muted">@Model.Items[i].SKU</small>
+                                        </td>
+                                        <td class="text-end">@Model.Items[i].ReceivedQuantity.ToString("N0")</td>
+                                        <td class="text-end text-muted">@Model.Items[i].AlreadyReturnedQuantity.ToString("N0")</td>
+                                        <td class="text-end fw-bold text-primary">@Model.Items[i].MaxReturnableQuantity.ToString("N0")</td>
+                                        <td class="text-end">@Model.Items[i].UnitCost.ToString("N2")</td>
+                                        <td>
+                                            <input asp-for="Items[i].ReturnQuantity" type="number" class="form-control form-control-sm text-center fw-bold pr-qty-input"
+                                                   min="0" max="@Model.Items[i].MaxReturnableQuantity" step="1"
+                                                   data-cost="@Model.Items[i].UnitCost" oninput="calcPrTotal()" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">Return Reason &amp; Adjustment</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="ReturnDate" class="form-label small fw-bold">Return Date</label>
+                            <input asp-for="ReturnDate" type="date" class="form-control form-control-sm" />
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Reason" class="form-label small fw-bold">Return Reason *</label>
+                            <input asp-for="Reason" class="form-control form-control-sm" placeholder="e.g., Defective batch / Expired items" required />
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Notes" class="form-label small fw-bold">Notes</label>
+                            <textarea asp-for="Notes" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <div class="bg-light border rounded p-3 mb-3 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Supplier Credit Note:</span>
+                            <span class="fs-4 fw-extrabold text-danger" id="prTotalDisplay">0.00</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                            <i class="bi bi-check2-circle me-1"></i> Complete Purchase Return
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+}
+
+<script>
+    function calcPrTotal() {
+        let sum = 0;
+        document.querySelectorAll('.pr-qty-input').forEach(inp => {
+            const qty = parseFloat(inp.value) || 0;
+            const cost = parseFloat(inp.getAttribute('data-cost')) || 0;
+            sum += qty * cost;
+        });
+        const disp = document.getElementById('prTotalDisplay');
+        if (disp) disp.textContent = sum.toFixed(2);
+    }
+</script>

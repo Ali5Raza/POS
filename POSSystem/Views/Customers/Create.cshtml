@@ -1,0 +1,53 @@
+@model CustomerViewModel
+@{
+    ViewData["Title"] = "Add Customer";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0">Add Registered Customer</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to Customers</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+        <form asp-action="Create" method="post" class="row g-3">
+            @Html.AntiForgeryToken()
+            <div class="col-md-6">
+                <label asp-for="Name" class="form-label small fw-bold">Customer Name *</label>
+                <input asp-for="Name" class="form-control" required />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Phone" class="form-label small fw-bold">Phone</label>
+                <input asp-for="Phone" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="Email" class="form-label small fw-bold">Email</label>
+                <input asp-for="Email" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label asp-for="Address" class="form-label small fw-bold">Address</label>
+                <input asp-for="Address" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="OpeningBalance" class="form-label small fw-bold">Opening Receivable Balance</label>
+                <input asp-for="OpeningBalance" type="number" step="0.01" class="form-control" />
+            </div>
+            <div class="col-md-3">
+                <label asp-for="CreditLimit" class="form-label small fw-bold">Credit Limit</label>
+                <input asp-for="CreditLimit" type="number" step="0.01" class="form-control" />
+            </div>
+            <div class="col-12 d-flex justify-content-between align-items-center pt-2 border-top">
+                <div class="form-check">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label fw-semibold">Active Customer</label>
+                </div>
+                <div class="d-flex gap-2">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Create Customer</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

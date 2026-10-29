@@ -1,0 +1,148 @@
+@model PurchaseCreateViewModel
+@{
+    ViewData["Title"] = "Create Purchase Order";
+    var products = ViewBag.Products as List<Product> ?? new List<Product>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Create Purchase Order</h4>
+        <span class="text-muted small">Order inventory items from supplier</span>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to PO List</a>
+</div>
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label asp-for="SupplierId" class="form-label small fw-bold">Supplier *</label>
+                    <select asp-for="SupplierId" asp-items="@ViewBag.Suppliers" class="form-select" required>
+                        <option value="">-- Select Supplier --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="OrderDate" class="form-label small fw-bold">Order Date</label>
+                    <input asp-for="OrderDate" type="date" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="ExpectedDeliveryDate" class="form-label small fw-bold">Expected Delivery Date</label>
+                    <input asp-for="ExpectedDeliveryDate" type="date" class="form-control" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="Status" class="form-label small fw-bold">Initial Status</label>
+                    <select asp-for="Status" class="form-select">
+                        <option value="Ordered">Ordered</option>
+                        <option value="Draft">Draft</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold">Purchase Order Line Items</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="addPoItemRow()">
+                <i class="bi bi-plus-lg me-1"></i> Add Item Row
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="poItemsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">Product</th>
+                        <th class="text-end" style="width: 15%;">Quantity</th>
+                        <th class="text-end" style="width: 18%;">Cost Price</th>
+                        <th class="text-end" style="width: 15%;">Discount</th>
+                        <th class="text-end" style="width: 12%;">Tax</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="poItemsBody">
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        <tr class="po-item-row">
+                            <td>
+                                <select name="Items[@i].ProductId" class="form-select form-select-sm po-prod-select" required onchange="onPoProdSelect(this)">
+                                    <option value="">-- Select Product --</option>
+                                    @foreach (var p in products)
+                                    {
+                                        <option value="@p.Id" data-cost="@p.CostPrice" selected="@(Model.Items[i].ProductId == p.Id)">
+                                            @p.SKU - @p.Name (Stock: @p.CurrentStock.ToString("N0"))
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].Quantity" value="@Model.Items[i].Quantity" class="form-control form-control-sm text-end" min="1" step="1" required />
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].CostPrice" value="@Model.Items[i].CostPrice" class="form-control form-control-sm text-end po-cost-input" min="0" step="0.01" required />
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].DiscountAmount" value="@Model.Items[i].DiscountAmount" class="form-control form-control-sm text-end" min="0" step="0.01" />
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].TaxAmount" value="@Model.Items[i].TaxAmount" class="form-control form-control-sm text-end" min="0" step="0.01" />
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm text-danger" onclick="removePoRow(this)"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+            <div class="w-50">
+                <input asp-for="Notes" class="form-control form-control-sm" placeholder="Purchase order notes / delivery instructions..." />
+            </div>
+            <div class="d-flex gap-2">
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary fw-bold px-4">Create Purchase Order</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    function onPoProdSelect(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        const cost = opt ? opt.getAttribute('data-cost') : '0';
+        const row = sel.closest('tr');
+        const costInput = row.querySelector('.po-cost-input');
+        if (costInput && cost) costInput.value = cost;
+    }
+
+    function addPoItemRow() {
+        const tbody = document.getElementById('poItemsBody');
+        const idx = tbody.querySelectorAll('tr').length;
+        const firstRow = tbody.querySelector('tr');
+        const clone = firstRow.cloneNode(true);
+        clone.querySelectorAll('select, input').forEach(el => {
+            const name = el.getAttribute('name');
+            if (name) el.setAttribute('name', name.replace(/\[\d+\]/, `[${idx}]`));
+            if (el.tagName === 'SELECT') el.selectedIndex = 0;
+            else if (name.includes('Quantity')) el.value = '10';
+            else el.value = '0';
+        });
+        tbody.appendChild(clone);
+    }
+
+    function removePoRow(btn) {
+        const tbody = document.getElementById('poItemsBody');
+        if (tbody.querySelectorAll('tr').length <= 1) return;
+        btn.closest('tr').remove();
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            tr.querySelectorAll('select, input').forEach(el => {
+                const name = el.getAttribute('name');
+                if (name) el.setAttribute('name', name.replace(/\[\d+\]/, `[${i}]`));
+            });
+        });
+    }
+</script>

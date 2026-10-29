@@ -1,0 +1,388 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Executive Dashboard";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0 text-dark">Store Operations Dashboard</h4>
+        <span class="text-muted small">Real-time retail POS, inventory valuation &amp; financial performance for <strong>@DateTime.UtcNow.ToString("dddd, dd MMM yyyy")</strong></span>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        @if (User.HasPermission(PermissionCodes.CreateSale))
+        {
+            <a asp-controller="POS" asp-action="Index" class="btn btn-primary fw-semibold shadow-sm">
+                <i class="bi bi-upc-scan me-1"></i> Launch POS Terminal
+            </a>
+        }
+        @if (User.HasPermission(PermissionCodes.ReceiveGoods))
+        {
+            <a asp-controller="GoodsReceiving" asp-action="Create" class="btn btn-outline-success fw-semibold bg-white">
+                <i class="bi bi-box-arrow-in-down me-1"></i> Receive Goods (GRN)
+            </a>
+        }
+        @if (User.HasPermission(PermissionCodes.DayClosing))
+        {
+            <a asp-controller="DayClosing" asp-action="Index" class="btn btn-outline-dark fw-semibold bg-white">
+                <i class="bi bi-calendar-check me-1"></i> Day Closing
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Row 1: Today's Financial & Sales KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-4 col-xl-2">
+        <div class="kpi-card border-start border-4 border-primary h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="kpi-label">Today's Sales</div>
+                <span class="kpi-icon-box bg-primary-subtle text-primary"><i class="bi bi-cash-stack"></i></span>
+            </div>
+            <div class="kpi-value text-primary">@Model.TodaySales.ToString("N2")</div>
+            <div class="small text-muted mt-1"><i class="bi bi-receipt me-1"></i>@Model.TodayTransactions Invoices Today</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-4 col-xl-2">
+        <div class="kpi-card border-start border-4 border-info h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="kpi-label">Today's Purchases</div>
+                <span class="kpi-icon-box bg-info-subtle text-info"><i class="bi bi-truck"></i></span>
+            </div>
+            <div class="kpi-value text-info">@Model.TodayPurchases.ToString("N2")</div>
+            <div class="small text-muted mt-1"><i class="bi bi-box-arrow-in-down me-1"></i>Completed GRNs</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-4 col-xl-2">
+        <div class="kpi-card border-start border-4 border-success h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="kpi-label">Gross Profit</div>
+                <span class="kpi-icon-box bg-success-subtle text-success"><i class="bi bi-graph-up-arrow"></i></span>
+            </div>
+            <div class="kpi-value text-success">@Model.TodayGrossProfit.ToString("N2")</div>
+            <div class="small text-muted mt-1">Net of COGS &amp; Returns</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-4 col-xl-2">
+        <div class="kpi-card border-start border-4 border-warning h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="kpi-label">Today's Expenses</div>
+                <span class="kpi-icon-box bg-warning-subtle text-warning"><i class="bi bi-wallet2"></i></span>
+            </div>
+            <div class="kpi-value text-warning">@Model.TodayExpenses.ToString("N2")</div>
+            <div class="small text-muted mt-1">Store Operating Costs</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-4 col-xl-2">
+        <div class="kpi-card border-start border-4 @(Model.TodayNetProfit >= 0 ? "border-success" : "border-danger") h-100">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="kpi-label">Net Profit</div>
+                <span class="kpi-icon-box @(Model.TodayNetProfit >= 0 ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger")">
+                    <i class="bi bi-pie-chart-fill"></i>
+                </span>
+            </div>
+            <div class="kpi-value @(Model.TodayNetProfit >= 0 ? "text-success" : "text-danger")">@Model.TodayNetProfit.ToString("N2")</div>
+            <div class="small text-muted mt-1">Gross Profit &minus; Expenses</div>
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-md-4 col-xl-2">
+        <div class="kpi-card border-start border-4 border-secondary h-100">
+            <div class="kpi-label mb-2">Cash / Credit Split</div>
+            <div class="small">
+                <div class="d-flex justify-content-between mb-1"><span>Cash Sales:</span><strong class="text-success">@Model.TodayCashSales.ToString("N0")</strong></div>
+                <div class="d-flex justify-content-between mb-1"><span>Credit Due:</span><strong class="text-primary">@Model.TodayCreditSales.ToString("N0")</strong></div>
+                <div class="d-flex justify-content-between"><span>Returns:</span><strong class="text-danger">@Model.TodayReturns.ToString("N0")</strong></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 2: Inventory & Ledger Summary Strip -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="kpi-card d-flex align-items-center justify-content-between">
+            <div>
+                <div class="kpi-label">Active Catalog Products</div>
+                <div class="kpi-value">@Model.TotalProducts</div>
+                <div class="small text-muted">Barcode &amp; SKU Tracked</div>
+            </div>
+            <div class="kpi-icon-box bg-primary-subtle text-primary" style="width:48px;height:48px;font-size:1.4rem;"><i class="bi bi-box-seam"></i></div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="kpi-card d-flex align-items-center justify-content-between">
+            <div>
+                <div class="kpi-label">Low Stock Alerts</div>
+                <div class="kpi-value text-warning">@Model.LowStockCount</div>
+                <div class="small text-muted">At or below min stock</div>
+            </div>
+            <div class="kpi-icon-box bg-warning-subtle text-warning" style="width:48px;height:48px;font-size:1.4rem;"><i class="bi bi-exclamation-triangle"></i></div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="kpi-card d-flex align-items-center justify-content-between">
+            <div>
+                <div class="kpi-label">Out of Stock Items</div>
+                <div class="kpi-value text-danger">@Model.OutOfStockCount</div>
+                <div class="small text-muted">Needs immediate PO/GRN</div>
+            </div>
+            <div class="kpi-icon-box bg-danger-subtle text-danger" style="width:48px;height:48px;font-size:1.4rem;"><i class="bi bi-x-octagon"></i></div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="kpi-card d-flex align-items-center justify-content-between">
+            <div>
+                <div class="kpi-label">Inventory Valuation (Cost)</div>
+                <div class="kpi-value text-dark">@Model.InventoryCostValue.ToString("N2")</div>
+                <div class="small text-success fw-semibold">Retail Value: @Model.InventoryRetailValue.ToString("N2")</div>
+            </div>
+            <div class="kpi-icon-box bg-success-subtle text-success" style="width:48px;height:48px;font-size:1.4rem;"><i class="bi bi-layers-fill"></i></div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 3: Charts Row -->
+<div class="row g-3 mb-4">
+    <!-- 7-Day Sales, Purchases & Profit Interactive Chart -->
+    <div class="col-lg-8">
+        <div class="card h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>Sales, Purchases &amp; Gross Profit (Last 7 Days)</h6>
+                <div class="d-flex gap-3 small">
+                    <span><span class="badge bg-primary">&nbsp;</span> Sales</span>
+                    <span><span class="badge bg-info">&nbsp;</span> Purchases</span>
+                    <span><span class="badge bg-success">&nbsp;</span> Profit</span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div style="height: 245px;">
+                    <canvas id="dashboard7DayChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Methods & Top Categories -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart-fill me-2 text-info"></i>Payment Methods &amp; Category Mix</h6>
+            </div>
+            <div class="card-body">
+                <div class="small fw-bold text-uppercase text-muted mb-2">Sales by Payment Method</div>
+                @{
+                    var totalPm = Model.PaymentMethodsChart.Sum(x => x.Value);
+                    if (totalPm <= 0) totalPm = 1m;
+                }
+                @foreach (var pm in Model.PaymentMethodsChart)
+                {
+                    var pct = (int)Math.Round((pm.Value / totalPm) * 100);
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="fw-semibold">@pm.Label <span class="text-muted">(@pm.Quantity inv)</span></span>
+                            <span class="fw-bold">@pm.Value.ToString("N2") (@pct%)</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-primary" style="width: @pct%"></div>
+                        </div>
+                    </div>
+                }
+
+                <hr class="my-3" />
+                <div class="small fw-bold text-uppercase text-muted mb-2">Top Selling Categories</div>
+                @{
+                    var totalCat = Model.TopCategoriesChart.Sum(x => x.Value);
+                    if (totalCat <= 0) totalCat = 1m;
+                }
+                @foreach (var cat in Model.TopCategoriesChart.Take(4))
+                {
+                    var pct = (int)Math.Round((cat.Value / totalCat) * 100);
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="fw-semibold">@cat.Label</span>
+                            <span class="fw-bold">@cat.Value.ToString("N2")</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: @pct%"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row 4: Top Products, Recent Sales & Low Stock Tables -->
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-trophy-fill me-2 text-warning"></i>Top Selling Products</h6>
+                <a asp-controller="Reports" asp-action="Index" asp-route-reportType="Sales" class="btn btn-sm btn-link text-decoration-none p-0">Full Report</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var tp in Model.TopProductsChart)
+                        {
+                            <tr>
+                                <td class="fw-medium">@tp.Label</td>
+                                <td class="text-end">@tp.Quantity.ToString("N0")</td>
+                                <td class="text-end fw-bold text-primary">@tp.Value.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-receipt me-2 text-primary"></i>Recent POS Sales</h6>
+                <a asp-controller="Sales" asp-action="Index" class="btn btn-sm btn-link text-decoration-none p-0">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Invoice</th>
+                            <th>Customer</th>
+                            <th class="text-end">Total</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.RecentSales)
+                        {
+                            <tr>
+                                <td>
+                                    <a asp-controller="Sales" asp-action="Details" asp-route-id="@s.Id" class="fw-semibold text-decoration-none">@s.InvoiceNumber</a>
+                                    <div class="text-muted" style="font-size:0.72rem;">@s.SaleDate.ToString("dd MMM HH:mm")</div>
+                                </td>
+                                <td>@(s.Customer?.Name ?? "Walk-in")</td>
+                                <td class="text-end fw-bold">@s.TotalAmount.ToString("N2")</td>
+                                <td class="text-end">
+                                    <a asp-controller="Sales" asp-action="Receipt" asp-route-id="@s.Id" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Print Receipt">
+                                        <i class="bi bi-printer"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle-fill me-2 text-danger"></i>Low &amp; Out of Stock Alerts</h6>
+                <a asp-controller="Inventory" asp-action="Index" asp-route-stockFilter="low" class="btn btn-sm btn-link text-decoration-none p-0">View Inventory</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Stock</th>
+                            <th class="text-end">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model.LowStockProducts)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-medium">@p.Name</div>
+                                    <small class="text-muted">@p.SKU</small>
+                                </td>
+                                <td class="text-end fw-bold">@p.CurrentStock.ToString("N0") @p.Unit</td>
+                                <td class="text-end">
+                                    @if (p.CurrentStock <= 0)
+                                    {
+                                        <span class="badge bg-danger">Out of Stock</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">Low Stock</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const ctx = document.getElementById('dashboard7DayChart');
+            if (!ctx || typeof Chart === 'undefined') return;
+
+            const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last7DaysChart.Select(x => x.DateLabel)));
+            const salesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last7DaysChart.Select(x => x.Sales)));
+            const purchasesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last7DaysChart.Select(x => x.Purchases)));
+            const profitData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Last7DaysChart.Select(x => Math.Max(0, x.Profit))));
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Sales',
+                            data: salesData,
+                            backgroundColor: 'rgba(2, 132, 199, 0.85)',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Purchases (GRN)',
+                            data: purchasesData,
+                            backgroundColor: 'rgba(14, 165, 233, 0.45)',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Gross Profit',
+                            data: profitData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.85)',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+}

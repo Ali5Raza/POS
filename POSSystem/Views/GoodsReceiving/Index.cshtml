@@ -1,0 +1,89 @@
+@model PaginatedList<GoodsReceipt>
+@{
+    ViewData["Title"] = "Goods Receiving (GRN)";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Goods Receiving Notes (GRN)</h4>
+        <span class="text-muted small">Receive goods against Purchase Orders or direct supplier deliveries &mdash; automatically increases inventory stock</span>
+    </div>
+    @if (User.HasPermission(PermissionCodes.ReceiveGoods))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-sm fw-semibold">
+            <i class="bi bi-box-arrow-in-down me-1"></i> New Goods Receipt (GRN)
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Search GRN # / Supplier Invoice / Company..." />
+            </div>
+            <div class="col-md-3">
+                <select name="supplierId" asp-items="@ViewBag.Suppliers" class="form-select form-select-sm">
+                    <option value="">All Suppliers</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>GRN Number</th>
+                    <th>Supplier</th>
+                    <th>PO Reference</th>
+                    <th>Receiving Date</th>
+                    <th>Items</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Paid</th>
+                    <th class="text-end">Due</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var g in Model)
+                {
+                    <tr>
+                        <td class="fw-bold"><a asp-action="Details" asp-route-id="@g.Id" class="text-decoration-none">@g.GRNNumber</a></td>
+                        <td>@g.Supplier?.CompanyName</td>
+                        <td>
+                            @if (g.PurchaseOrder != null)
+                            {
+                                <a asp-controller="PurchaseOrders" asp-action="Details" asp-route-id="@g.PurchaseOrderId" class="badge bg-info-subtle text-dark border text-decoration-none">@g.PurchaseOrder.PONumber</a>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">Direct</span>
+                            }
+                        </td>
+                        <td>@g.ReceivingDate.ToString("yyyy-MM-dd")</td>
+                        <td>@g.Items.Count</td>
+                        <td class="text-end fw-bold">@g.TotalAmount.ToString("N2")</td>
+                        <td class="text-end text-success">@g.PaidAmount.ToString("N2")</td>
+                        <td class="text-end @(g.DueAmount > 0 ? "text-danger fw-bold" : "text-muted")">@g.DueAmount.ToString("N2")</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@g.Id" class="btn btn-outline-primary"><i class="bi bi-eye"></i> View</a>
+                                <a asp-controller="PurchaseReturns" asp-action="Create" asp-route-goodsReceiptId="@g.Id" class="btn btn-outline-warning text-dark"><i class="bi bi-arrow-return-left"></i> Return</a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

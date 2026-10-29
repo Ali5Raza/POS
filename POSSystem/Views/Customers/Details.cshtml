@@ -1,0 +1,81 @@
+@model CustomerDetailsViewModel
+@{
+    ViewData["Title"] = $"Customer Ledger - {Model.Customer.Name}";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0">@Model.Customer.Name</h4>
+        <span class="text-muted small">Phone: @(Model.Customer.Phone ?? "-") | Email: @(Model.Customer.Email ?? "-") | Address: @(Model.Customer.Address ?? "-")</span>
+    </div>
+    <div class="d-flex gap-2">
+        @if (!Model.Customer.IsWalkIn && User.HasPermission(PermissionCodes.CreatePayment))
+        {
+            <a asp-controller="Payments" asp-action="Create" asp-route-customerId="@Model.Customer.Id" asp-route-paymentType="CustomerReceipt" class="btn btn-success btn-sm fw-semibold">
+                <i class="bi bi-cash-coin me-1"></i> Receive Customer Payment
+            </a>
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to Customers</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <div class="kpi-label">Credit Limit</div>
+            <div class="kpi-value">@(Model.Customer.IsWalkIn ? "N/A (Walk-in)" : Model.Customer.CreditLimit.ToString("N2"))</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <div class="kpi-label">Total Sales Volume</div>
+            <div class="kpi-value text-primary">@Model.Sales.Sum(s => s.TotalAmount).ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="kpi-card">
+            <div class="kpi-label">Current Receivable Balance</div>
+            <div class="kpi-value @(Model.Customer.CurrentBalance > 0 ? "text-danger" : "text-success")">@Model.Customer.CurrentBalance.ToString("N2")</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-journal-text me-2 text-primary"></i>Customer Financial Ledger</h6>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print Ledger</button>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Transaction Type</th>
+                    <th>Reference #</th>
+                    <th>Description</th>
+                    <th class="text-end">Debit (Sale/Invoice)</th>
+                    <th class="text-end">Credit (Payment/Return)</th>
+                    <th class="text-end">Running Receivable Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Ledger.Any())
+                {
+                    <tr><td colspan="7" class="text-center text-muted py-4">No ledger transactions recorded yet.</td></tr>
+                }
+                @foreach (var entry in Model.Ledger)
+                {
+                    <tr>
+                        <td>@entry.Date.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td><span class="badge bg-light text-dark border">@entry.TransactionType</span></td>
+                        <td class="fw-semibold">@entry.ReferenceNumber</td>
+                        <td>@entry.Description</td>
+                        <td class="text-end text-danger">@(entry.Debit > 0 ? entry.Debit.ToString("N2") : "-")</td>
+                        <td class="text-end text-success">@(entry.Credit > 0 ? entry.Credit.ToString("N2") : "-")</td>
+                        <td class="text-end fw-bold">@entry.RunningBalance.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

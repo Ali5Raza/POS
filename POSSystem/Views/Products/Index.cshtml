@@ -1,0 +1,152 @@
+@model PaginatedList<Product>
+@{
+    ViewData["Title"] = "Products Catalog";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0">Products Management</h4>
+        <span class="text-muted small">Manage retail &amp; wholesale catalog, SKUs, barcodes, pricing tiers and stock levels</span>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-controller="Categories" asp-action="Index" class="btn btn-outline-secondary btn-sm fw-semibold">
+            <i class="bi bi-tags me-1"></i> Categories
+        </a>
+        @if (User.HasPermission(PermissionCodes.CreateProduct))
+        {
+            <a asp-action="Create" class="btn btn-primary btn-sm fw-semibold">
+                <i class="bi bi-plus-lg me-1"></i> Add New Product
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Search & Filter Bar -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold mb-1">Search by Name, SKU or Barcode</label>
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Enter SKU, Barcode or Product Name..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Filter by Category</label>
+                <select name="categoryId" asp-items="@ViewBag.Categories" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Stock Status</label>
+                <select name="stockFilter" class="form-select form-select-sm">
+                    <option value="">All Stock Levels</option>
+                    <option value="instock" selected="@(ViewBag.StockFilter == "instock")">In Stock (&gt; 0)</option>
+                    <option value="low" selected="@(ViewBag.StockFilter == "low")">Low Stock Alert</option>
+                    <option value="out" selected="@(ViewBag.StockFilter == "out")">Out of Stock (0)</option>
+                    <option value="reorder" selected="@(ViewBag.StockFilter == "reorder")">At / Below Reorder Level</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-search me-1"></i>Search</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>SKU / Barcode</th>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th class="text-end">Cost</th>
+                    <th class="text-end">Sale Price</th>
+                    <th class="text-end">Wholesale</th>
+                    <th class="text-end">Current Stock</th>
+                    <th>Stock Status</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="10" class="text-center text-muted py-4">No products found matching your search.</td></tr>
+                }
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-bold text-dark">@p.SKU</div>
+                            <small class="text-muted"><i class="bi bi-upc me-1"></i>@p.Barcode</small>
+                        </td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@p.Id" class="fw-semibold text-decoration-none text-dark">@p.Name</a>
+                            <div class="small text-muted">Tax: @p.TaxRate% | Min Price: @p.MinimumSalePrice.ToString("N2")</div>
+                        </td>
+                        <td><span class="badge bg-light text-dark border">@p.Category?.Name</span></td>
+                        <td class="text-end">@p.CostPrice.ToString("N2")</td>
+                        <td class="text-end fw-bold text-primary">@p.SalePrice.ToString("N2")</td>
+                        <td class="text-end">@p.WholesalePrice.ToString("N2")</td>
+                        <td class="text-end fw-bold">@p.CurrentStock.ToString("N0") @p.Unit</td>
+                        <td>
+                            @if (p.CurrentStock <= 0)
+                            {
+                                <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Out of Stock</span>
+                            }
+                            else if (p.CurrentStock <= p.MinimumStockLevel)
+                            {
+                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle me-1"></i>Low Stock</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">In Stock</span>
+                            }
+                        </td>
+                        <td>
+                            @if (p.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactive</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@p.Id" class="btn btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
+                                @if (User.HasPermission(PermissionCodes.EditProduct))
+                                {
+                                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                                }
+                                @if (User.HasPermission(PermissionCodes.DeleteProduct))
+                                {
+                                    <form asp-action="ToggleActive" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.Id" />
+                                        <button type="submit" class="btn @(p.IsActive ? "btn-outline-danger" : "btn-outline-success")" title="@(p.IsActive ? "Deactivate" : "Activate")">
+                                            <i class="bi @(p.IsActive ? "bi-slash-circle" : "bi-check-circle")"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
+            <span class="small text-muted">Page @Model.PageIndex of @Model.TotalPages (@Model.TotalCount products)</span>
+            <div class="btn-group btn-group-sm">
+                <a asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-search="@ViewBag.Search" asp-route-categoryId="@ViewBag.CategoryId" asp-route-stockFilter="@ViewBag.StockFilter" class="btn btn-outline-secondary @(!Model.HasPreviousPage ? "disabled" : "")">Previous</a>
+                <a asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-search="@ViewBag.Search" asp-route-categoryId="@ViewBag.CategoryId" asp-route-stockFilter="@ViewBag.StockFilter" class="btn btn-outline-secondary @(!Model.HasNextPage ? "disabled" : "")">Next</a>
+            </div>
+        </div>
+    }
+</div>

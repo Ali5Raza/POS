@@ -1,0 +1,98 @@
+@model GoodsReceipt
+@{
+    ViewData["Title"] = $"GRN {Model.GRNNumber}";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0">Goods Receipt Note: @Model.GRNNumber</h4>
+        <span class="text-muted small">Supplier: <strong>@Model.Supplier?.CompanyName</strong> | Date: @Model.ReceivingDate.ToString("yyyy-MM-dd") | Supplier Invoice: @(Model.SupplierInvoiceNumber ?? "-")</span>
+    </div>
+    <div class="d-flex gap-2">
+        @if (User.HasPermission(PermissionCodes.PurchaseReturn))
+        {
+            <a asp-controller="PurchaseReturns" asp-action="Create" asp-route-goodsReceiptId="@Model.Id" class="btn btn-warning btn-sm fw-semibold">
+                <i class="bi bi-arrow-return-left me-1"></i> Create Purchase Return
+            </a>
+        }
+        <button type="button" class="btn btn-outline-dark btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print</button>
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to GRNs</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">Received Line Items</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Ordered</th>
+                            <th class="text-end">Received</th>
+                            <th class="text-end">Damaged</th>
+                            <th class="text-end">Returned</th>
+                            <th class="text-end">Unit Cost</th>
+                            <th class="text-end">Line Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">@item.Product?.Name</div>
+                                    <small class="text-muted">@item.Product?.SKU</small>
+                                </td>
+                                <td class="text-end">@item.OrderedQuantity.ToString("N0")</td>
+                                <td class="text-end fw-bold text-success">@item.ReceivedQuantity.ToString("N0")</td>
+                                <td class="text-end text-warning">@item.DamagedQuantity.ToString("N0")</td>
+                                <td class="text-end text-danger">@item.ReturnedQuantity.ToString("N0")</td>
+                                <td class="text-end">@item.CostPrice.ToString("N2")</td>
+                                <td class="text-end fw-bold">@item.LineTotal.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">GRN Financial Summary</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Subtotal:</span>
+                    <span>@Model.SubTotal.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Discount:</span>
+                    <span>-@Model.DiscountAmount.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Tax:</span>
+                    <span>@Model.TaxAmount.ToString("N2")</span>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between fs-5 fw-bold mb-2">
+                    <span>Total Amount:</span>
+                    <span class="text-primary">@Model.TotalAmount.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Paid Amount (@Model.PaymentMethod):</span>
+                    <span class="text-success fw-semibold">@Model.PaidAmount.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Balance Due to Supplier:</span>
+                    <span class="@(Model.DueAmount > 0 ? "text-danger fw-bold" : "text-muted")">@Model.DueAmount.ToString("N2")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

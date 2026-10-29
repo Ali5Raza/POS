@@ -1,0 +1,27 @@
+@model (int StatusCode, string Title, string Message)
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="row justify-content-center py-5">
+    <div class="col-md-7 col-lg-6">
+        <div class="card border-0 shadow-sm text-center p-4">
+            <div class="card-body">
+                <div class="display-3 fw-bold text-danger mb-2">@Model.StatusCode</div>
+                <h3 class="fw-bold mb-3">@Model.Title</h3>
+                <p class="text-muted mb-4">@Model.Message</p>
+                <div class="d-flex justify-content-center gap-2">
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Go Back
+                    </a>
+                    <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary">
+                        <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                    </a>
+                    <a asp-controller="POS" asp-action="Index" class="btn btn-success">
+                        <i class="bi bi-upc-scan me-1"></i> POS Terminal
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

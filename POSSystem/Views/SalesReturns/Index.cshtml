@@ -1,0 +1,82 @@
+@model PaginatedList<SalesReturn>
+@{
+    ViewData["Title"] = "Sales Returns";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Sales Returns &amp; Refunds</h4>
+        <span class="text-muted small">Track customer returns, stock restocking and refund vouchers</span>
+    </div>
+    @if (User.HasPermission(PermissionCodes.SalesReturn))
+    {
+        <a asp-action="Create" class="btn btn-primary fw-semibold">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> New Sales Return
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold mb-1">Search Return # / Invoice # / Customer</label>
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="SR-... or INV-..." />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">From Date</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">To Date</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Return #</th>
+                    <th>Original Invoice</th>
+                    <th>Return Date</th>
+                    <th>Customer</th>
+                    <th>Reason</th>
+                    <th>Refund Method</th>
+                    <th class="text-end">Total Refund</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="9" class="text-center text-muted py-4">No sales returns recorded yet.</td></tr>
+                }
+                @foreach (var sr in Model)
+                {
+                    <tr>
+                        <td class="fw-bold"><a asp-action="Details" asp-route-id="@sr.Id" class="text-decoration-none">@sr.ReturnNumber</a></td>
+                        <td><a asp-controller="Sales" asp-action="Details" asp-route-id="@sr.SaleId" class="text-decoration-none">@sr.Sale?.InvoiceNumber</a></td>
+                        <td>@sr.ReturnDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@(sr.Customer?.Name ?? "Walk-in Customer")</td>
+                        <td>@sr.Reason</td>
+                        <td><span class="badge bg-light text-dark border">@sr.RefundMethod</span></td>
+                        <td class="text-end fw-bold text-danger">@sr.TotalRefundAmount.ToString("N2")</td>
+                        <td><span class="badge bg-success">@sr.Status</span></td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@sr.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i> View</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

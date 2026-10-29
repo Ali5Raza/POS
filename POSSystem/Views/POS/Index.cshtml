@@ -1,0 +1,427 @@
+@model POSViewModel
+@{
+    ViewData["Title"] = "Retail POS Terminal";
+}
+
+<form id="posAntiForgeryForm" class="d-none">
+    @Html.AntiForgeryToken()
+</form>
+
+<div id="posAlertBox" class="alert d-none py-2 px-3 mb-2 shadow-sm small rounded-3" role="alert"></div>
+
+<!-- MODERN HIGH-SPEED POS WORKSPACE -->
+<div class="pos-modern-shell">
+
+    <!-- 1. TOP ENTRY & TERMINAL BAR -->
+    <div class="pos-modern-topbar card border-0 shadow-sm mb-2">
+        <div class="card-body p-2 px-3">
+            <div class="row g-2 align-items-end">
+                <!-- Item Code / Barcode / Search -->
+                <div class="col-lg-4 col-md-5 position-relative pos-field-itemcode">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="posBarcodeInput" class="pos-modern-label mb-0">
+                            <i class="bi bi-upc-scan text-primary me-1"></i>Item Code / Barcode <span class="text-primary">(F2)</span>
+                        </label>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem;">SCANNER READY</span>
+                    </div>
+                    <input type="text" id="posBarcodeInput" class="form-control form-control-sm pos-modern-input fw-bold"
+                           placeholder="Scan barcode or type SKU / product name..." autocomplete="off" autofocus />
+                    <div id="posCodeSuggestions" class="pos-autocomplete-Menu d-none"></div>
+                </div>
+
+                <!-- Quantity -->
+                <div class="col-lg-1 col-md-2 col-4">
+                    <label for="posEntryQty" class="pos-modern-label">Quantity</label>
+                    <input type="number" id="posEntryQty" class="form-control form-control-sm pos-modern-input text-end fw-bold"
+                           value="1" min="1" step="1" />
+                </div>
+
+                <!-- Rate -->
+                <div class="col-lg-2 col-md-2 col-4">
+                    <label for="posEntryRate" class="pos-modern-label">Rate</label>
+                    <input type="number" id="posEntryRate" class="form-control form-control-sm pos-modern-input text-end fw-bold"
+                           placeholder="0.00" step="0.01" @(Model.CanOverridePrice ? "" : "readonly") />
+                </div>
+
+                <!-- Amount -->
+                <div class="col-lg-2 col-md-2 col-4">
+                    <label for="posEntryAmount" class="pos-modern-label">Amount</label>
+                    <input type="text" id="posEntryAmount" class="form-control form-control-sm pos-modern-input text-end fw-bold bg-light"
+                           value="0.00" readonly />
+                </div>
+
+                <!-- Add Button -->
+                <div class="col-lg-1 col-md-1 col-12">
+                    <button type="button" class="btn btn-primary btn-sm w-100 fw-bold pos-modern-addbtn" onclick="POS.commitEntryRow()">
+                        <i class="bi bi-plus-lg me-1"></i>Add
+                    </button>
+                </div>
+
+                <!-- Right Terminal Meta Pill -->
+                <div class="col-lg-2 d-none d-lg-block">
+                    <div class="pos-modern-meta-pill">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Operator:</span>
+                            <strong class="text-dark">@User.GetUsername()</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Date:</span>
+                            <strong class="text-dark">@DateTime.UtcNow.ToString("dd MMM yyyy")</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MAIN WORKSPACE: LEFT COMPACT BASKET & PRODUCTS | RIGHT VERTICAL CALCULATION PANEL -->
+    <div class="pos-modern-main-grid">
+
+        <!-- LEFT COLUMN: Compact Basket + Dense Product Catalog -->
+        <div class="pos-modern-left">
+
+            <!-- Basket Card -->
+            <div class="card border-0 shadow-sm mb-2">
+                <div class="card-header bg-white py-1 px-3 d-flex flex-wrap justify-content-between align-items-center border-bottom">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold text-dark small"><i class="bi bi-basket2-fill text-primary me-1"></i>Basket Items</span>
+                        <span class="badge bg-light text-secondary border" id="posLedItemName" style="font-size:0.72rem;font-weight:600;">Ready to scan</span>
+                    </div>
+                    <div class="text-muted d-none d-md-block" style="font-size:0.72rem;">
+                        <kbd>F2</kbd> Code &middot; <kbd>F4</kbd> Hold &middot; <kbd>F5</kbd> Recall (<span id="heldCountBadge">@Model.HeldSales.Count</span>) &middot; <kbd>F6</kbd> Payment &middot; <kbd>F7</kbd> Discount &middot; <kbd>F8</kbd> Clear &middot; <kbd>F9</kbd> Complete
+                    </div>
+                </div>
+
+                <!-- Ultra-Compact Basket Table -->
+                <div class="pos-modern-basket-wrap">
+                    <table class="pos-modern-basket-table" id="posCartTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 34px;" class="text-center">#</th>
+                                <th style="width: 110px;">Item Code</th>
+                                <th>Description</th>
+                                <th class="text-end" style="width: 85px;">Qty</th>
+                                <th class="text-end" style="width: 95px;">Rate</th>
+                                <th class="text-end" style="width: 95px;">Fix Disc</th>
+                                <th class="text-end" style="width: 105px;">Amount</th>
+                                <th class="text-center" style="width: 32px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="posCartBody">
+                            <tr id="posEmptyCartRow">
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    <i class="bi bi-upc-scan me-1"></i> Scan barcode, enter Item Code above, or click any product below to add to basket
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Compact Quick-Pick Catalog Card (Maximum products visible at once) -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-1 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2 border-bottom">
+                    <div class="d-flex flex-wrap gap-1 py-1" id="posCategoryBar">
+                        <button type="button" class="btn btn-xs btn-primary pos-category-btn active" data-category-id="0">
+                            All Products (@Model.Products.Count)
+                        </button>
+                        @foreach (var cat in Model.Categories)
+                        {
+                            <button type="button" class="btn btn-xs btn-outline-secondary pos-category-btn" data-category-id="@cat.Id">
+                                @cat.Name
+                            </button>
+                        }
+                    </div>
+                    <div class="input-group input-group-sm" style="width: 230px;">
+                        <span class="input-group-text py-0 px-2 bg-light"><i class="bi bi-search" style="font-size:0.72rem;"></i></span>
+                        <input type="text" id="posSearchInput" class="form-control form-control-sm py-0" style="font-size:0.76rem;height:26px;"
+                               placeholder="Quick filter products..." autocomplete="off" />
+                        <button type="button" class="btn btn-outline-secondary py-0 px-2" id="btnResetSearch" style="height:26px;font-size:0.72rem;">&times;</button>
+                    </div>
+                </div>
+                <div class="card-body p-2">
+                    <div class="pos-dense-product-grid" id="posProductGrid">
+                        @foreach (var p in Model.Products)
+                        {
+                            bool isOut = p.CurrentStock <= 0;
+                            bool isLow = !isOut && p.CurrentStock <= p.MinimumStockLevel;
+                            <div class="pos-dense-product-tile @(isOut ? "out-of-stock" : "")"
+                                 data-product-id="@p.Id"
+                                 data-sku="@p.SKU"
+                                 data-barcode="@p.Barcode"
+                                 data-name="@p.Name"
+                                 data-category-id="@p.CategoryId"
+                                 data-sale-price="@p.SalePrice"
+                                 data-wholesale-price="@p.WholesalePrice"
+                                 data-min-price="@p.MinimumSalePrice"
+                                 data-tax-rate="0"
+                                 data-stock="@p.CurrentStock"
+                                 data-unit="@p.Unit"
+                                 onclick="POS.addProductFromCard(this)"
+                                 title="@p.Name | Barcode: @p.Barcode | Stock: @p.CurrentStock @p.Unit">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="pos-tile-code">@p.SKU</span>
+                                    <span class="pos-tile-stock badge @(isOut ? "bg-danger-subtle text-danger" : (isLow ? "bg-warning-subtle text-warning" : "bg-success-subtle text-success"))">
+                                        @p.CurrentStock.ToString("N0") @p.Unit
+                                    </span>
+                                </div>
+                                <div class="pos-tile-name text-truncate">@p.Name</div>
+                                <div class="d-flex justify-content-between align-items-center mt-1">
+                                    <span class="pos-tile-barcode text-muted">@p.Barcode</span>
+                                    <span class="pos-tile-price pos-card-price" data-retail="@p.SalePrice" data-wholesale="@p.WholesalePrice">
+                                        @p.SalePrice.ToString("N0")
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: CLEAN VERTICAL CALCULATION PANEL (Sub Total, Fix Discount, Payable, Payment, Change) -->
+        <div class="pos-modern-right">
+            <div class="card border-0 shadow-sm overflow-hidden">
+                <!-- Total Items Header -->
+                <div class="pos-calc-header d-flex justify-content-between align-items-center px-3 py-2">
+                    <span class="fw-bold small text-uppercase tracking-wide">Total Items</span>
+                    <span class="fs-5 fw-extrabold">
+                        <span id="posTotalLinesCount">0</span> <small class="opacity-75 fw-normal">lines</small> / <span id="posTotalItemsCount">0</span> <small class="opacity-75 fw-normal">qty</small>
+                    </span>
+                </div>
+
+                <!-- Vertical Calculation Rows -->
+                <div class="pos-vertical-calc-board">
+                    <!-- 1. Sub Total -->
+                    <div class="pos-calc-row">
+                        <div class="pos-calc-label">
+                            <span>Sub Total</span>
+                            <small class="text-white-50">Gross Amount</small>
+                        </div>
+                        <div class="pos-calc-value text-white" id="posSubTotalDisplay">0.00</div>
+                    </div>
+
+                    <!-- 2. Fixed Discount -->
+                    <div class="pos-calc-row">
+                        <div class="pos-calc-label">
+                            <span class="text-warning">Discount <small>(F7)</small></span>
+                            <small class="text-white-50">Fixed Discount</small>
+                        </div>
+                        <div class="pos-calc-value d-flex align-items-center justify-content-end">
+                            <input type="number" id="posInvoiceDiscount" class="pos-calc-input text-warning"
+                                   value="0.00" min="0" step="1" oninput="POS.recalculate()" title="Enter fixed discount amount" />
+                        </div>
+                    </div>
+
+                    <!-- 3. Payable (Net Grand Total) -->
+                    <div class="pos-calc-row pos-calc-payable-row">
+                        <div class="pos-calc-label">
+                            <span class="text-info fw-extrabold">Payable</span>
+                            <small class="text-info opacity-75" id="posPaymentStatusText">Net Total</small>
+                        </div>
+                        <div class="pos-calc-value text-info fw-extrabold" id="posGrandTotalDisplay">0.00</div>
+                    </div>
+
+                    <!-- 4. Payment Received -->
+                    <div class="pos-calc-row">
+                        <div class="pos-calc-label">
+                            <span class="text-success-emphasis" style="color:#4ade80 !important;">Payment <small>(F6)</small></span>
+                            <small class="text-white-50">Cash Tendered</small>
+                        </div>
+                        <div class="pos-calc-value d-flex align-items-center justify-content-end">
+                            <input type="number" id="posPaidAmount" class="pos-calc-input" style="color:#4ade80 !important;"
+                                   value="0.00" min="0" step="1" oninput="POS.updateChangeAndDue()" title="Enter received payment amount" />
+                        </div>
+                    </div>
+
+                    <!-- 5. Change Return -->
+                    <div class="pos-calc-row">
+                        <div class="pos-calc-label">
+                            <span style="color:#f87171 !important;">Change</span>
+                            <small class="text-white-50">Return to Customer</small>
+                        </div>
+                        <div class="pos-calc-value" style="color:#f87171 !important;" id="posChangeDisplay">0.00</div>
+                    </div>
+                </div>
+
+                <!-- Customer, Payment Mode & Pricing Tier Controls -->
+                <div class="p-2 px-3 bg-light border-top">
+                    <div class="mb-2">
+                        <label for="posCustomerSelect" class="pos-modern-label">Customer (F3)</label>
+                        <select id="posCustomerSelect" class="form-select form-select-sm fw-semibold">
+                            @foreach (var c in Model.Customers)
+                            {
+                                if (c.IsWalkIn)
+                                {
+                                    <option value="@c.Id" data-is-walkin="true" selected>@c.Name (Default)</option>
+                                }
+                                else
+                                {
+                                    <option value="@c.Id" data-is-walkin="false" data-balance="@c.CurrentBalance" data-limit="@c.CreditLimit">
+                                        @c.Name [Bal: @c.CurrentBalance.ToString("N0")]
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-7">
+                            <label for="posPaymentMethod" class="pos-modern-label">Payment Mode</label>
+                            <select id="posPaymentMethod" class="form-select form-select-sm fw-semibold" onchange="POS.onPaymentMethodChange()">
+                                <option value="Cash" selected>Cash</option>
+                                <option value="Card">Card / POS</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="Credit">Credit Account</option>
+                            </select>
+                        </div>
+                        <div class="col-5">
+                            <label for="posPriceTier" class="pos-modern-label">Price Tier</label>
+                            <select id="posPriceTier" class="form-select form-select-sm fw-semibold" onchange="POS.onPriceTierChange()">
+                                <option value="Retail" selected>Retail</option>
+                                <option value="Wholesale">Wholesale</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <button type="button" id="btnCompleteSale" class="btn btn-success w-100 fw-bold py-2 shadow-sm mb-2 fs-6" onclick="POS.completeSale()">
+                        <i class="bi bi-check2-circle me-1"></i> Complete Sale (F9)
+                    </button>
+
+                    <div class="row g-1">
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-primary btn-sm w-100 fw-semibold" onclick="POS.holdCurrentSale()">
+                                <i class="bi bi-pause-circle me-1"></i>Hold (F4)
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" class="btn btn-outline-info btn-sm w-100 fw-semibold" data-bs-toggle="modal" data-bs-target="#heldSalesModal">
+                                <i class="bi bi-collection me-1"></i>Recall (F5)
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100 fw-semibold" onclick="POS.setExactCash()">
+                                Exact
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-danger btn-sm w-100 fw-semibold" onclick="POS.clearCart()">
+                                Clear (F8)
+                            </button>
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-outline-dark btn-sm w-100 fw-semibold" id="btnPrintLastReceipt" disabled onclick="POS.printLastReceipt()">
+                                <i class="bi bi-printer"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Held Sales Modal (F5) -->
+<div class="modal fade" id="heldSalesModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pause-btn me-2 text-primary"></i>Held Sales Orders</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="heldSalesTable">
+                        <thead>
+                            <tr>
+                                <th>Reference</th>
+                                <th>Customer</th>
+                                <th>Time</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="heldSalesTableBody">
+                            @if (!Model.HeldSales.Any())
+                            {
+                                <tr><td colspan="5" class="text-center text-muted py-3">No held sales at the moment.</td></tr>
+                            }
+                            else
+                            {
+                                foreach (var h in Model.HeldSales)
+                                {
+                                    <tr data-held-id="@h.Id" data-cart-json="@h.CartJson" data-customer-id="@h.CustomerId">
+                                        <td class="fw-bold">@h.HoldReference</td>
+                                        <td>@h.CustomerName</td>
+                                        <td>@h.CreatedAt.ToString("dd MMM HH:mm")</td>
+                                        <td class="text-end fw-semibold">@h.TotalAmount.ToString("N2")</td>
+                                        <td class="text-end">
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="POS.resumeHeldSale(@h.Id, this)">
+                                                <i class="bi bi-play-fill"></i> Resume
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="POS.deleteHeldSale(@h.Id, this)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Completed Sale Confirmation & Print Modal -->
+<div class="modal fade" id="saleCompletedModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-check-circle-fill me-2"></i>Sale Completed Successfully</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div class="fs-5 fw-bold text-dark mb-1" id="completedInvoiceNum">INV-0000</div>
+                <p class="text-muted small mb-3">Inventory stock, ledger &amp; payment records updated atomically.</p>
+                <div class="row g-2 bg-light rounded p-3 mb-3 text-start">
+                    <div class="col-6">Total Amount:</div>
+                    <div class="col-6 text-end fw-bold" id="completedTotalAmt">0.00</div>
+                    <div class="col-6">Amount Paid:</div>
+                    <div class="col-6 text-end fw-semibold" id="completedPaidAmt">0.00</div>
+                    <div class="col-6 text-success fw-bold">Change Return:</div>
+                    <div class="col-6 text-end text-success fw-bold fs-5" id="completedChangeAmt">0.00</div>
+                    <div class="col-6 text-danger">Balance Due:</div>
+                    <div class="col-6 text-end text-danger fw-semibold" id="completedDueAmt">0.00</div>
+                </div>
+                <div class="d-flex justify-content-center gap-2">
+                    <a id="btnThermalReceiptLink" href="#" target="_blank" class="btn btn-primary fw-semibold">
+                        <i class="bi bi-printer me-1"></i> Print Thermal Receipt
+                    </a>
+                    <a id="btnA4InvoiceLink" href="#" target="_blank" class="btn btn-outline-dark fw-semibold">
+                        <i class="bi bi-file-earmark-richtext me-1"></i> A4 Invoice
+                    </a>
+                    <button type="button" class="btn btn-success fw-semibold" data-bs-dismiss="modal" onclick="document.getElementById('posBarcodeInput').focus()">
+                        New Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        window.POS_CONFIG = {
+            canOverridePrice: @(Model.CanOverridePrice.ToString().ToLower()),
+            canApplyHighDiscount: @(Model.CanApplyHighDiscount.ToString().ToLower()),
+            allowNegativeStock: @(Model.AllowNegativeStock.ToString().ToLower()),
+            maxNormalDiscountPercent: @Model.MaxNormalDiscountPercent,
+            enableTax: false,
+            defaultTaxRate: 0
+        };
+    </script>
+    <script src="~/js/pos.js" asp-append-version="true"></script>
+}

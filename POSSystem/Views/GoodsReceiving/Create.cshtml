@@ -1,0 +1,213 @@
+@model GoodsReceiptViewModel
+@{
+    ViewData["Title"] = "Create Goods Receipt (GRN)";
+    var openPos = ViewBag.OpenPOs as List<PurchaseOrder> ?? new List<PurchaseOrder>();
+    var products = ViewBag.Products as List<Product> ?? new List<Product>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Create Goods Receipt Note (GRN)</h4>
+        <span class="text-muted small">Completing a GRN atomically increases product stock, writes to the stock ledger, and updates supplier balance</span>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to GRNs</a>
+</div>
+
+<!-- Load from Purchase Order Bar -->
+<div class="card mb-3 bg-light">
+    <div class="card-body py-2">
+        <form method="get" asp-action="Create" class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <select name="purchaseOrderId" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="">-- Direct Purchase (Or Select Purchase Order to Convert to GRN) --</option>
+                    @foreach (var po in openPos)
+                    {
+                        <option value="@po.Id" selected="@(Model.PurchaseOrderId == po.Id)">
+                            @po.PONumber - @po.Supplier?.CompanyName (Ordered: @po.OrderDate.ToString("yyyy-MM-dd"), Total: @po.TotalAmount.ToString("N2"))
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-sm btn-outline-primary w-100">Load PO Items</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="PurchaseOrderId" />
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label asp-for="SupplierId" class="form-label small fw-bold">Supplier *</label>
+                    <select asp-for="SupplierId" asp-items="@ViewBag.Suppliers" class="form-select" required>
+                        <option value="">-- Select Supplier --</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="ReceivingDate" class="form-label small fw-bold">Receiving Date</label>
+                    <input asp-for="ReceivingDate" type="date" class="form-control" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="SupplierInvoiceNumber" class="form-label small fw-bold">Supplier Invoice #</label>
+                    <input asp-for="SupplierInvoiceNumber" class="form-control" placeholder="e.g., SUP-INV-104" />
+                </div>
+                <div class="col-md-2">
+                    <label asp-for="PaymentMethod" class="form-label small fw-bold">Payment Method</label>
+                    <select asp-for="PaymentMethod" class="form-select">
+                        <option value="Cash">Cash</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                        <option value="Card">Card</option>
+                        <option value="Credit">Supplier Credit</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold">Received Items</h6>
+            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold" onclick="addGrnRow()">
+                <i class="bi bi-plus-lg me-1"></i> Add Product Row
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="grnItemsTable">
+                <thead>
+                    <tr>
+                        <th style="width: 34%;">Product</th>
+                        <th class="text-end">Ordered</th>
+                        <th class="text-end">Received Qty *</th>
+                        <th class="text-end">Damaged Qty</th>
+                        <th class="text-end">Unit Cost *</th>
+                        <th class="text-end">Discount</th>
+                        <th class="text-end">Tax</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="grnItemsBody">
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <input type="hidden" name="Items[@i].PurchaseOrderItemId" value="@Model.Items[i].PurchaseOrderItemId" />
+                                <select name="Items[@i].ProductId" class="form-select form-select-sm" required onchange="onGrnProdSelect(this)">
+                                    <option value="">-- Select Product --</option>
+                                    @foreach (var p in products)
+                                    {
+                                        <option value="@p.Id" data-cost="@p.CostPrice" selected="@(Model.Items[i].ProductId == p.Id)">
+                                            @p.SKU - @p.Name (Curr Stock: @p.CurrentStock.ToString("N0"))
+                                        </option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].OrderedQuantity" value="@Model.Items[i].OrderedQuantity" class="form-control form-control-sm text-end" step="1" />
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].ReceivedQuantity" value="@Model.Items[i].ReceivedQuantity" class="form-control form-control-sm text-end fw-bold grn-calc" min="0" step="1" required oninput="calcGrnTotals()" />
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].DamagedQuantity" value="@Model.Items[i].DamagedQuantity" class="form-control form-control-sm text-end" min="0" step="1" />
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].CostPrice" value="@Model.Items[i].CostPrice" class="form-control form-control-sm text-end grn-cost grn-calc" min="0" step="0.01" required oninput="calcGrnTotals()" />
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].DiscountAmount" value="@Model.Items[i].DiscountAmount" class="form-control form-control-sm text-end grn-disc grn-calc" min="0" step="0.01" oninput="calcGrnTotals()" />
+                            </td>
+                            <td>
+                                <input type="number" name="Items[@i].TaxAmount" value="@Model.Items[i].TaxAmount" class="form-control form-control-sm text-end grn-tax grn-calc" min="0" step="0.01" oninput="calcGrnTotals()" />
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm text-danger" onclick="removeGrnRow(this)"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-light py-3">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label asp-for="Notes" class="form-label small fw-bold">GRN Notes</label>
+                    <input asp-for="Notes" class="form-control form-control-sm" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Calculated Total</label>
+                    <input type="text" id="grnTotalDisplay" class="form-control form-control-sm fw-bold bg-white text-end" readonly value="0.00" />
+                </div>
+                <div class="col-md-3">
+                    <label asp-for="PaidAmount" class="form-label small fw-bold">Amount Paid to Supplier</label>
+                    <input asp-for="PaidAmount" type="number" step="0.01" class="form-control form-control-sm text-end fw-bold" />
+                </div>
+                <div class="col-md-3 d-flex justify-content-end gap-2">
+                    <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-success fw-bold px-4">
+                        <i class="bi bi-check2-circle me-1"></i> Complete GRN
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    function onGrnProdSelect(sel) {
+        const opt = sel.options[sel.selectedIndex];
+        const cost = opt ? opt.getAttribute('data-cost') : '0';
+        const row = sel.closest('tr');
+        const costInp = row.querySelector('.grn-cost');
+        if (costInp && cost) costInp.value = cost;
+        calcGrnTotals();
+    }
+
+    function calcGrnTotals() {
+        let total = 0;
+        document.querySelectorAll('#grnItemsBody tr').forEach(tr => {
+            const qty = parseFloat(tr.querySelector('input[name*="ReceivedQuantity"]')?.value) || 0;
+            const cost = parseFloat(tr.querySelector('input[name*="CostPrice"]')?.value) || 0;
+            const disc = parseFloat(tr.querySelector('input[name*="DiscountAmount"]')?.value) || 0;
+            const tax = parseFloat(tr.querySelector('input[name*="TaxAmount"]')?.value) || 0;
+            total += (qty * cost) - disc + tax;
+        });
+        const disp = document.getElementById('grnTotalDisplay');
+        if (disp) disp.value = Math.max(0, total).toFixed(2);
+    }
+
+    function addGrnRow() {
+        const tbody = document.getElementById('grnItemsBody');
+        const idx = tbody.querySelectorAll('tr').length;
+        const clone = tbody.querySelector('tr').cloneNode(true);
+        clone.querySelectorAll('select, input').forEach(el => {
+            const name = el.getAttribute('name');
+            if (name) el.setAttribute('name', name.replace(/\[\d+\]/, `[${idx}]`));
+            if (el.tagName === 'SELECT') el.selectedIndex = 0;
+            else if (name && name.includes('ReceivedQuantity')) el.value = '10';
+            else el.value = '0';
+        });
+        tbody.appendChild(clone);
+        calcGrnTotals();
+    }
+
+    function removeGrnRow(btn) {
+        const tbody = document.getElementById('grnItemsBody');
+        if (tbody.querySelectorAll('tr').length <= 1) return;
+        btn.closest('tr').remove();
+        tbody.querySelectorAll('tr').forEach((tr, i) => {
+            tr.querySelectorAll('select, input').forEach(el => {
+                const name = el.getAttribute('name');
+                if (name) el.setAttribute('name', name.replace(/\[\d+\]/, `[${i}]`));
+            });
+        });
+        calcGrnTotals();
+    }
+
+    document.addEventListener('DOMContentLoaded', calcGrnTotals);
+</script>

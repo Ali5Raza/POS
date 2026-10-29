@@ -1,0 +1,245 @@
+@model ReceiptViewModel
+@{
+    ViewData["Title"] = $"Receipt - {Model.Sale.InvoiceNumber}";
+    bool isA4 = string.Equals(Model.Format, "A4", StringComparison.OrdinalIgnoreCase);
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 no-print">
+    <div>
+        <h5 class="fw-bold mb-0">Printable @(isA4 ? "A4 Tax Invoice" : "Thermal POS Receipt")</h5>
+        <span class="text-muted small">Invoice @Model.Sale.InvoiceNumber</span>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Receipt" asp-route-id="@Model.Sale.Id" asp-route-format="Thermal"
+           class="btn btn-sm @(!isA4 ? "btn-primary" : "btn-outline-primary") fw-semibold">
+            <i class="bi bi-receipt me-1"></i> Thermal Format (80mm)
+        </a>
+        <a asp-action="Receipt" asp-route-id="@Model.Sale.Id" asp-route-format="A4"
+           class="btn btn-sm @(isA4 ? "btn-primary" : "btn-outline-primary") fw-semibold">
+            <i class="bi bi-file-earmark-richtext me-1"></i> A4 Invoice Format
+        </a>
+        <button type="button" class="btn btn-sm btn-success fw-bold px-3" onclick="window.print()">
+            <i class="bi bi-printer-fill me-1"></i> Print Now
+        </button>
+        <a asp-controller="POS" asp-action="Index" class="btn btn-sm btn-outline-secondary">Back to POS</a>
+    </div>
+</div>
+
+@if (!isA4)
+{
+    <!-- Thermal 80mm Receipt -->
+    <div class="thermal-receipt shadow-sm">
+        <div class="text-center mb-2">
+            <img src="@Model.BusinessLogo" alt="Logo" style="height: 34px;" class="mb-1" />
+            <div class="fw-bold" style="font-size: 14px;">@Model.BusinessName</div>
+            <div>@Model.BusinessAddress</div>
+            <div>Tel: @Model.BusinessPhone</div>
+            @if (!string.IsNullOrWhiteSpace(Model.TaxNumber))
+            {
+                <div>Tax/NTN: @Model.TaxNumber</div>
+            }
+        </div>
+        <hr class="my-1 border-dark" />
+        <div class="d-flex justify-content-between">
+            <span>Invoice:</span>
+            <strong>@Model.Sale.InvoiceNumber</strong>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>Date:</span>
+            <span>@Model.Sale.SaleDate.ToString("yyyy-MM-dd HH:mm")</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>Cashier:</span>
+            <span>@(Model.Sale.Cashier?.FullName ?? "Cashier")</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>Customer:</span>
+            <span>@(Model.Sale.Customer?.Name ?? "Walk-in Customer")</span>
+        </div>
+        <hr class="my-1 border-dark" />
+        <table class="w-100" style="font-size: 12px;">
+            <thead>
+                <tr class="border-bottom border-dark">
+                    <th class="text-start">Item</th>
+                    <th class="text-center">Qty</th>
+                    <th class="text-end">Price</th>
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Sale.Items)
+                {
+                    <tr>
+                        <td colspan="4" class="pt-1 fw-bold">@(item.Product?.Name ?? $"Item #{item.ProductId}")</td>
+                    </tr>
+                    <tr>
+                        <td><small>@item.Product?.SKU</small></td>
+                        <td class="text-center">@item.Quantity.ToString("N0")</td>
+                        <td class="text-end">@item.UnitPrice.ToString("N2")</td>
+                        <td class="text-end fw-bold">@item.LineTotal.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <hr class="my-1 border-dark" />
+        <div class="d-flex justify-content-between">
+            <span>Subtotal:</span>
+            <span>@Model.Sale.SubTotal.ToString("N2")</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>Discount:</span>
+            <span>-@Model.Sale.DiscountAmount.ToString("N2")</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>Tax:</span>
+            <span>@Model.Sale.TaxAmount.ToString("N2")</span>
+        </div>
+        <div class="d-flex justify-content-between fw-bold fs-6 border-top border-bottom border-dark py-1 my-1">
+            <span>GRAND TOTAL:</span>
+            <span>@Model.Sale.TotalAmount.ToString("N2")</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>Paid (@Model.Sale.PaymentMethod):</span>
+            <span>@Model.Sale.PaidAmount.ToString("N2")</span>
+        </div>
+        <div class="d-flex justify-content-between">
+            <span>Change:</span>
+            <span>@Model.Sale.ChangeAmount.ToString("N2")</span>
+        </div>
+        @if (Model.Sale.DueAmount > 0)
+        {
+            <div class="d-flex justify-content-between fw-bold">
+                <span>Balance Due:</span>
+                <span>@Model.Sale.DueAmount.ToString("N2")</span>
+            </div>
+        }
+        <hr class="my-2 border-dark" />
+        <div class="text-center" style="font-size: 11px;">
+            <div>@Model.InvoiceFooter</div>
+            <div class="mt-1 fw-bold">* @Model.Sale.InvoiceNumber *</div>
+        </div>
+    </div>
+}
+else
+{
+    <!-- A4 Professional Invoice -->
+    <div class="a4-invoice shadow-sm rounded">
+        <div class="row justify-content-between align-items-start mb-4 pb-3 border-bottom">
+            <div class="col-7">
+                <img src="@Model.BusinessLogo" alt="Logo" style="height: 46px;" class="mb-2" />
+                <h4 class="fw-bold mb-1">@Model.BusinessName</h4>
+                <div class="text-muted small">@Model.BusinessAddress</div>
+                <div class="text-muted small">Phone: @Model.BusinessPhone | Email: @Model.BusinessEmail</div>
+                @if (!string.IsNullOrWhiteSpace(Model.TaxNumber))
+                {
+                    <div class="small fw-semibold">Tax / NTN Registration: @Model.TaxNumber</div>
+                }
+            </div>
+            <div class="col-5 text-end">
+                <h3 class="fw-extrabold text-primary mb-1">TAX INVOICE</h3>
+                <div class="fw-bold fs-5">@Model.Sale.InvoiceNumber</div>
+                <div class="small text-muted">Date: @Model.Sale.SaleDate.ToString("dd MMM yyyy HH:mm")</div>
+                <div class="small text-muted">Status: <strong>@Model.Sale.Status</strong></div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-6">
+                <div class="small text-uppercase text-muted fw-bold">Billed To Customer</div>
+                <div class="fw-bold fs-6">@(Model.Sale.Customer?.Name ?? "Walk-in Customer")</div>
+                @if (!string.IsNullOrWhiteSpace(Model.Sale.Customer?.Phone))
+                {
+                    <div class="small text-muted">Phone: @Model.Sale.Customer.Phone</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.Sale.Customer?.Address))
+                {
+                    <div class="small text-muted">Address: @Model.Sale.Customer.Address</div>
+                }
+            </div>
+            <div class="col-6 text-end">
+                <div class="small text-uppercase text-muted fw-bold">Transaction Info</div>
+                <div class="small">Cashier: <strong>@(Model.Sale.Cashier?.FullName ?? "System")</strong></div>
+                <div class="small">Payment Method: <strong>@Model.Sale.PaymentMethod</strong></div>
+                <div class="small">Pricing Tier: <strong>@Model.Sale.PriceTier</strong></div>
+            </div>
+        </div>
+
+        <table class="table table-bordered align-middle mb-4">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>SKU</th>
+                    <th>Product Description</th>
+                    <th class="text-end">Qty</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-end">Discount</th>
+                    <th class="text-end">Tax</th>
+                    <th class="text-end">Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @{ int idx = 1; }
+                @foreach (var item in Model.Sale.Items)
+                {
+                    <tr>
+                        <td>@(idx++)</td>
+                        <td>@item.Product?.SKU</td>
+                        <td class="fw-semibold">@item.Product?.Name</td>
+                        <td class="text-end">@item.Quantity.ToString("N0")</td>
+                        <td class="text-end">@item.UnitPrice.ToString("N2")</td>
+                        <td class="text-end">@item.DiscountAmount.ToString("N2")</td>
+                        <td class="text-end">@item.TaxAmount.ToString("N2") (@item.TaxRate%)</td>
+                        <td class="text-end fw-bold">@item.LineTotal.ToString("N2")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="row justify-content-end">
+            <div class="col-md-5">
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Subtotal:</span>
+                    <span class="fw-semibold">@Model.Sale.SubTotal.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Discount:</span>
+                    <span class="text-danger">-@Model.Sale.DiscountAmount.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Tax:</span>
+                    <span>@Model.Sale.TaxAmount.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between fs-5 fw-bold border-top border-bottom py-2 mb-2">
+                    <span>Grand Total:</span>
+                    <span class="text-primary">@Model.Sale.TotalAmount.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Amount Paid:</span>
+                    <span class="fw-semibold">@Model.Sale.PaidAmount.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-1">
+                    <span>Change Returned:</span>
+                    <span>@Model.Sale.ChangeAmount.ToString("N2")</span>
+                </div>
+                <div class="d-flex justify-content-between small fw-bold">
+                    <span>Balance Due:</span>
+                    <span class="@(Model.Sale.DueAmount > 0 ? "text-danger" : "")">@Model.Sale.DueAmount.ToString("N2")</span>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4" />
+        <div class="text-center text-muted small">
+            @Model.InvoiceFooter
+        </div>
+    </div>
+}
+
+@if (Model.AutoPrint)
+{
+    <script>
+        window.addEventListener('load', function () {
+            window.print();
+        });
+    </script>
+}

@@ -1,0 +1,93 @@
+@model PaginatedList<Payment>
+@{
+    ViewData["Title"] = "Payments & Financial Vouchers";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Payment Management</h4>
+        <span class="text-muted small">Track customer payments, supplier payments, POS sale receipts and return refunds</span>
+    </div>
+    @if (User.HasPermission(PermissionCodes.CreatePayment))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-sm fw-semibold">
+            <i class="bi bi-plus-lg me-1"></i> Record New Payment
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="PAY # / Reference / Customer / Supplier..." />
+            </div>
+            <div class="col-md-3">
+                <select name="paymentType" class="form-select form-select-sm">
+                    <option value="">All Payment Types</option>
+                    <option value="SaleReceipt" selected="@(ViewBag.PaymentType == "SaleReceipt")">Sale Receipt</option>
+                    <option value="CustomerReceipt" selected="@(ViewBag.PaymentType == "CustomerReceipt")">Customer Balance Payment</option>
+                    <option value="PurchasePayment" selected="@(ViewBag.PaymentType == "PurchasePayment")">Purchase Payment</option>
+                    <option value="SupplierPayment" selected="@(ViewBag.PaymentType == "SupplierPayment")">Supplier Payable Payment</option>
+                    <option value="SalesRefund" selected="@(ViewBag.PaymentType == "SalesRefund")">Sales Return Refund</option>
+                    <option value="PurchaseRefund" selected="@(ViewBag.PaymentType == "PurchaseRefund")">Purchase Return Refund</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="paymentMethod" class="form-select form-select-sm">
+                    <option value="">All Methods</option>
+                    <option value="Cash" selected="@(ViewBag.PaymentMethod == "Cash")">Cash</option>
+                    <option value="Card" selected="@(ViewBag.PaymentMethod == "Card")">Card</option>
+                    <option value="Bank Transfer" selected="@(ViewBag.PaymentMethod == "Bank Transfer")">Bank Transfer</option>
+                    <option value="Other" selected="@(ViewBag.PaymentMethod == "Other")">Other</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Payment #</th>
+                    <th>Date / Time</th>
+                    <th>Type</th>
+                    <th>Customer / Supplier</th>
+                    <th>Method</th>
+                    <th>Reference</th>
+                    <th class="text-end">Amount</th>
+                    <th>Recorded By</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">No payments found matching criteria.</td></tr>
+                }
+                @foreach (var p in Model)
+                {
+                    bool isInflow = p.PaymentType == "SaleReceipt" || p.PaymentType == "CustomerReceipt" || p.PaymentType == "PurchaseRefund";
+                    <tr>
+                        <td class="fw-bold">@p.PaymentNumber</td>
+                        <td>@p.PaymentDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td><span class="badge @(isInflow ? "bg-success-subtle text-success" : "bg-warning-subtle text-dark") border">@p.PaymentType</span></td>
+                        <td>@(p.Customer?.Name ?? p.Supplier?.CompanyName ?? "-")</td>
+                        <td><span class="badge bg-light text-dark border">@p.PaymentMethod</span></td>
+                        <td>@(p.ReferenceNumber ?? "-")</td>
+                        <td class="text-end fw-bold @(isInflow ? "text-success" : "text-danger")">@p.Amount.ToString("N2")</td>
+                        <td>@(p.User?.Username ?? "System")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

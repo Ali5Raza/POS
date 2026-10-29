@@ -1,0 +1,103 @@
+@model PaymentViewModel
+@{
+    ViewData["Title"] = "Record Payment";
+    var customers = ViewBag.Customers as List<Customer> ?? new List<Customer>();
+    var suppliers = ViewBag.Suppliers as List<Supplier> ?? new List<Supplier>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Record Customer or Supplier Payment</h4>
+        <span class="text-muted small">Automatically updates customer receivable balance or supplier payable balance</span>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to Payments</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+        <form asp-action="Create" method="post" class="row g-3">
+            @Html.AntiForgeryToken()
+
+            <div class="col-md-4">
+                <label asp-for="PaymentType" class="form-label small fw-bold">Payment Type *</label>
+                <select asp-for="PaymentType" id="payTypeSelect" class="form-select" onchange="togglePartyDropdowns()">
+                    <option value="CustomerReceipt">Customer Payment (Reduce Customer Balance)</option>
+                    <option value="SupplierPayment">Supplier Payment (Reduce Supplier Balance)</option>
+                    <option value="SalesRefund">Customer Refund</option>
+                    <option value="PurchaseRefund">Supplier Refund</option>
+                </select>
+            </div>
+
+            <div class="col-md-4" id="custCol">
+                <label asp-for="CustomerId" class="form-label small fw-bold">Select Customer</label>
+                <select asp-for="CustomerId" class="form-select">
+                    <option value="">-- Select Customer --</option>
+                    @foreach (var c in customers)
+                    {
+                        <option value="@c.Id">@c.Name (Current Due: @c.CurrentBalance.ToString("N2"))</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-4" id="supCol">
+                <label asp-for="SupplierId" class="form-label small fw-bold">Select Supplier</label>
+                <select asp-for="SupplierId" class="form-select">
+                    <option value="">-- Select Supplier --</option>
+                    @foreach (var s in suppliers)
+                    {
+                        <option value="@s.Id">@s.CompanyName (Payable Balance: @s.CurrentBalance.ToString("N2"))</option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="Amount" class="form-label small fw-bold">Payment Amount *</label>
+                <input asp-for="Amount" type="number" step="0.01" min="0.01" class="form-control fw-bold" required />
+                <span asp-validation-for="Amount" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="PaymentMethod" class="form-label small fw-bold">Payment Method *</label>
+                <select asp-for="PaymentMethod" class="form-select">
+                    <option value="Cash">Cash</option>
+                    <option value="Card">Card</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="PaymentDate" class="form-label small fw-bold">Payment Date</label>
+                <input asp-for="PaymentDate" type="date" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="ReferenceNumber" class="form-label small fw-bold">Reference / Check / TXN #</label>
+                <input asp-for="ReferenceNumber" class="form-control" placeholder="e.g., TXN-10992" />
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label small fw-bold">Notes</label>
+                <input asp-for="Notes" class="form-control" placeholder="Payment remarks..." />
+            </div>
+
+            <div class="col-12 d-flex justify-content-end gap-2 pt-2 border-top">
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary fw-bold px-4">
+                    <i class="bi bi-check2-circle me-1"></i> Save Payment Voucher
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function togglePartyDropdowns() {
+        const val = document.getElementById('payTypeSelect').value;
+        const isCustomer = val === 'CustomerReceipt' || val === 'SalesRefund';
+        document.getElementById('custCol').style.display = isCustomer ? '' : 'none';
+        document.getElementById('supCol').style.display = isCustomer ? 'none' : '';
+    }
+    document.addEventListener('DOMContentLoaded', togglePartyDropdowns);
+</script>

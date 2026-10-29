@@ -1,0 +1,76 @@
+@model PaginatedList<PurchaseReturn>
+@{
+    ViewData["Title"] = "Purchase Returns";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Purchase Returns to Suppliers</h4>
+        <span class="text-muted small">Return damaged or excess received goods to suppliers &mdash; automatically decreases inventory stock &amp; supplier balance</span>
+    </div>
+    @if (User.HasPermission(PermissionCodes.PurchaseReturn))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-sm fw-semibold">
+            <i class="bi bi-arrow-return-left me-1"></i> New Purchase Return
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Search Return # / GRN # / Supplier..." />
+            </div>
+            <div class="col-md-4">
+                <select name="supplierId" asp-items="@ViewBag.Suppliers" class="form-select form-select-sm">
+                    <option value="">All Suppliers</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Filter</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Return #</th>
+                    <th>Original GRN</th>
+                    <th>Supplier</th>
+                    <th>Return Date</th>
+                    <th>Reason</th>
+                    <th class="text-end">Total Adjustment</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="8" class="text-center text-muted py-4">No purchase returns recorded yet.</td></tr>
+                }
+                @foreach (var pr in Model)
+                {
+                    <tr>
+                        <td class="fw-bold"><a asp-action="Details" asp-route-id="@pr.Id" class="text-decoration-none">@pr.ReturnNumber</a></td>
+                        <td><a asp-controller="GoodsReceiving" asp-action="Details" asp-route-id="@pr.GoodsReceiptId" class="text-decoration-none">@pr.GoodsReceipt?.GRNNumber</a></td>
+                        <td>@pr.Supplier?.CompanyName</td>
+                        <td>@pr.ReturnDate.ToString("yyyy-MM-dd")</td>
+                        <td>@pr.Reason</td>
+                        <td class="text-end fw-bold text-danger">@pr.TotalReturnAmount.ToString("N2")</td>
+                        <td><span class="badge bg-success">@pr.Status</span></td>
+                        <td class="text-end">
+                            <a asp-action="Details" asp-route-id="@pr.Id" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i> View</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

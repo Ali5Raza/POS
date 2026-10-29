@@ -1,0 +1,60 @@
+@model List<Permission>
+@{
+    ViewData["Title"] = "Permissions Matrix";
+    var roles = ViewBag.Roles as List<Role> ?? new List<Role>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">System Permissions Matrix</h4>
+        <span class="text-muted small">Overview of all @Model.Count granular security permissions across system roles</span>
+    </div>
+    <a asp-controller="Roles" asp-action="Index" class="btn btn-primary btn-sm fw-semibold">
+        <i class="bi bi-shield-lock me-1"></i> Manage Role Assignments
+    </a>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Module</th>
+                    <th>Permission Code</th>
+                    <th>Permission Name</th>
+                    @foreach (var r in roles)
+                    {
+                        <th class="text-center">@r.Name</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model)
+                {
+                    <tr>
+                        <td><span class="badge bg-light text-dark border">@p.Module</span></td>
+                        <td><code>@p.Code</code></td>
+                        <td>
+                            <div class="fw-semibold">@p.Name</div>
+                            <small class="text-muted">@p.Description</small>
+                        </td>
+                        @foreach (var r in roles)
+                        {
+                            bool hasPerm = r.Name == "Admin" || p.RolePermissions.Any(rp => rp.RoleId == r.Id);
+                            <td class="text-center">
+                                @if (hasPerm)
+                                {
+                                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-dash-circle text-muted opacity-50"></i>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

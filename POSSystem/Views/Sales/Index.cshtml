@@ -1,0 +1,142 @@
+@model PaginatedList<Sale>
+@{
+    ViewData["Title"] = "Sales Invoices";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0">Sales Invoices</h4>
+        <span class="text-muted small">Manage retail &amp; wholesale sales, payment statuses, receipts and returns</span>
+    </div>
+    <div class="d-flex gap-2">
+        @if (User.HasPermission(PermissionCodes.CreateSale))
+        {
+            <a asp-controller="POS" asp-action="Index" class="btn btn-primary fw-semibold">
+                <i class="bi bi-upc-scan me-1"></i> New POS Sale
+            </a>
+        }
+        @if (User.HasPermission(PermissionCodes.SalesReturn))
+        {
+            <a asp-controller="SalesReturns" asp-action="Create" class="btn btn-outline-warning text-dark fw-semibold">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Process Return
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold mb-1">Search Invoice / Customer</label>
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="INV-2026... or Customer" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    <option value="Completed" selected="@(ViewBag.Status == "Completed")">Completed</option>
+                    <option value="PartiallyReturned" selected="@(ViewBag.Status == "PartiallyReturned")">Partially Returned</option>
+                    <option value="Returned" selected="@(ViewBag.Status == "Returned")">Returned</option>
+                    <option value="Cancelled" selected="@(ViewBag.Status == "Cancelled")">Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">Payment Method</label>
+                <select name="paymentMethod" class="form-select form-select-sm">
+                    <option value="">All Methods</option>
+                    <option value="Cash" selected="@(ViewBag.PaymentMethod == "Cash")">Cash</option>
+                    <option value="Card" selected="@(ViewBag.PaymentMethod == "Card")">Card</option>
+                    <option value="Bank Transfer" selected="@(ViewBag.PaymentMethod == "Bank Transfer")">Bank Transfer</option>
+                    <option value="Credit" selected="@(ViewBag.PaymentMethod == "Credit")">Credit</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">From Date</label>
+                <input type="date" name="fromDate" value="@ViewBag.FromDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold mb-1">To Date</label>
+                <input type="date" name="toDate" value="@ViewBag.ToDate" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-1 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-funnel"></i></button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-clockwise"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date / Time</th>
+                    <th>Customer</th>
+                    <th>Cashier</th>
+                    <th>Method</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-end">Paid</th>
+                    <th class="text-end">Due</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Any())
+                {
+                    <tr><td colspan="10" class="text-center text-muted py-4">No sales invoices found matching criteria.</td></tr>
+                }
+                @foreach (var s in Model)
+                {
+                    <tr>
+                        <td class="fw-bold">
+                            <a asp-action="Details" asp-route-id="@s.Id" class="text-decoration-none">@s.InvoiceNumber</a>
+                        </td>
+                        <td>@s.SaleDate.ToString("yyyy-MM-dd HH:mm")</td>
+                        <td>@(s.Customer?.Name ?? "Walk-in Customer")</td>
+                        <td>@(s.Cashier?.FullName ?? "System")</td>
+                        <td><span class="badge bg-light text-dark border">@s.PaymentMethod</span></td>
+                        <td class="text-end fw-bold">@s.TotalAmount.ToString("N2")</td>
+                        <td class="text-end text-success">@s.PaidAmount.ToString("N2")</td>
+                        <td class="text-end @(s.DueAmount > 0 ? "text-danger fw-bold" : "text-muted")">@s.DueAmount.ToString("N2")</td>
+                        <td>
+                            @if (s.Status == "Completed")
+                            {
+                                <span class="badge bg-success">Completed</span>
+                            }
+                            else if (s.Status == "Cancelled")
+                            {
+                                <span class="badge bg-danger">Cancelled</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">@s.Status</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@s.Id" class="btn btn-outline-primary" title="Details"><i class="bi bi-eye"></i></a>
+                                <a asp-action="Receipt" asp-route-id="@s.Id" asp-route-format="Thermal" class="btn btn-outline-secondary" title="Thermal Receipt"><i class="bi bi-printer"></i></a>
+                                <a asp-action="Receipt" asp-route-id="@s.Id" asp-route-format="A4" class="btn btn-outline-dark" title="A4 Invoice"><i class="bi bi-file-earmark-text"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
+            <span class="small text-muted">Page @Model.PageIndex of @Model.TotalPages (@Model.TotalCount total invoices)</span>
+            <div class="btn-group btn-group-sm">
+                <a asp-action="Index" asp-route-page="@(Model.PageIndex - 1)" asp-route-search="@ViewBag.Search" asp-route-status="@ViewBag.Status" class="btn btn-outline-secondary @(!Model.HasPreviousPage ? "disabled" : "")">Previous</a>
+                <a asp-action="Index" asp-route-page="@(Model.PageIndex + 1)" asp-route-search="@ViewBag.Search" asp-route-status="@ViewBag.Status" class="btn btn-outline-secondary @(!Model.HasNextPage ? "disabled" : "")">Next</a>
+            </div>
+        </div>
+    }
+</div>
