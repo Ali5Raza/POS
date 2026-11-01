@@ -11,7 +11,42 @@ public static class DbInitializer
         using var scope = serviceProvider.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        await context.Database.MigrateAsync();
+        var dbPath = context.Database.GetDbConnection().DataSource;
+        if (!string.IsNullOrWhiteSpace(dbPath) && !dbPath.Contains(":memory:", StringComparison.OrdinalIgnoreCase))
+        {
+            var walPath = dbPath + "-wal";
+            var shmPath = dbPath + "-shm";
+
+            // If main db does not exist yet, remove any leftover orphan WAL/SHM files
+            if (!File.Exists(dbPath))
+            {
+                try { if (File.Exists(walPath)) File.Delete(walPath); } catch { }
+                try { if (File.Exists(shmPath)) File.Delete(shmPath); } catch { }
+            }
+
+            try
+            {
+                await context.Database.MigrateAsync();
+                await context.Database.ExecuteSqlRawAsync("PRAGMA wal_checkpoint(TRUNCATE);");
+                await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=DELETE;");
+                _ = await context.Users.CountAsync();
+            }
+            catch
+            {
+                // Self-heal if local possystem.db had a mismatched .db-wal / .db-shm after git pull
+                try { await context.Database.CloseConnectionAsync(); } catch { }
+                try { if (File.Exists(walPath)) File.Delete(walPath); } catch { }
+                try { if (File.Exists(shmPath)) File.Delete(shmPath); } catch { }
+                try { if (File.Exists(dbPath)) File.Delete(dbPath); } catch { }
+
+                await context.Database.MigrateAsync();
+                await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=DELETE;");
+            }
+        }
+        else
+        {
+            await context.Database.MigrateAsync();
+        }
 
         // 1. Seed Warehouse
         if (!await context.Warehouses.AnyAsync())

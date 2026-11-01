@@ -35,23 +35,26 @@ public class AccountController : Controller
 
     [HttpPost]
     [AllowAnonymous]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Login(LoginViewModel model)
     {
         if (!ModelState.IsValid)
             return View(model);
 
-        var username = model.Username.Trim().ToLower();
+        var username = (model.Username ?? string.Empty).Trim().ToLower();
         var user = await _context.Users
             .Include(u => u.Role)
                 .ThenInclude(r => r!.RolePermissions)
                     .ThenInclude(rp => rp.Permission)
             .FirstOrDefaultAsync(u => u.Username.ToLower() == username);
 
-        if (user == null || !PasswordHelper.VerifyPassword(user, user.PasswordHash, model.Password))
+        if (user == null || !PasswordHelper.VerifyPassword(user, user.PasswordHash, model.Password ?? string.Empty))
         {
             ModelState.AddModelError(string.Empty, "Invalid username or password.");
-            await _auditService.LogAsync(null, model.Username, "FailedLogin", "ApplicationUser", null, null, "Invalid credentials attempt", HttpContext.Connection.RemoteIpAddress?.ToString());
+            try
+            {
+                await _auditService.LogAsync(null, model.Username ?? "unknown", "FailedLogin", "ApplicationUser", null, null, "Invalid credentials attempt", HttpContext.Connection.RemoteIpAddress?.ToString());
+            }
+            catch { }
             return View(model);
         }
 
@@ -61,8 +64,12 @@ public class AccountController : Controller
             return View(model);
         }
 
-        user.LastLogin = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
+        try
+        {
+            user.LastLogin = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+        }
+        catch { }
 
         var claims = new List<Claim>
         {

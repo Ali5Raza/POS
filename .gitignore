@@ -13,6 +13,7 @@ obj/
 .profile
 *.user
 *.suo
+*.db
 *.db-shm
 *.db-wal
 POSSystem-SourceCode.zip

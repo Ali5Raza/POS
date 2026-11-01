@@ -19,8 +19,18 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownProxies.Clear();
 });
 
-// Database: SQLite + EF Core 8
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=possystem.db";
+// Database: SQLite + EF Core 8 (Always resolve inside ContentRootPath with Pooling=False to avoid Windows file/WAL locks)
+var rawConn = builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=possystem.db";
+string connectionString;
+if (rawConn.Contains(":memory:", StringComparison.OrdinalIgnoreCase) || rawConn.Contains(Path.DirectorySeparatorChar) || rawConn.Contains('/'))
+{
+    connectionString = rawConn;
+}
+else
+{
+    var dbPath = Path.Combine(builder.Environment.ContentRootPath, "possystem.db");
+    connectionString = $"Data Source={dbPath};Pooling=False";
+}
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 
