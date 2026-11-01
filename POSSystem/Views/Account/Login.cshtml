@@ -1,0 +1,182 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Sign In";
+}
+
+<div class="login-page-bg min-vh-100 d-flex align-items-center justify-content-center p-3 p-md-4">
+    <div class="container" style="max-width: 1060px;">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden login-shell-card">
+            <div class="row g-0">
+                <!-- Left Brand & Quick Role Showcase Panel -->
+                <div class="col-lg-6 login-hero-panel text-white p-4 p-md-5 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <div class="login-brand-badge">AP</div>
+                            <div>
+                                <div class="fw-bold fs-5 tracking-tight text-white">APEX RETAIL ERP</div>
+                                <div class="small text-info fw-semibold" style="letter-spacing: 0.08em; font-size: 0.72rem;">POINT OF SALE &amp; INVENTORY SUITE</div>
+                            </div>
+                        </div>
+
+                        <h3 class="fw-bold mb-2 lh-sm">Complete Retail POS, Stock Ledger &amp; Accounting</h3>
+                        <p class="text-white-50 small mb-4">
+                            Fast barcode billing, multi-tier retail/wholesale pricing, Goods Receiving (GRN), customer/supplier ledgers, and automated daily &amp; monthly closings.
+                        </p>
+
+                        <div class="row g-2 mb-4">
+                            <div class="col-6">
+                                <div class="login-feature-pill">
+                                    <i class="bi bi-upc-scan text-info"></i>
+                                    <span>Barcode POS &amp; Hold Bills</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="login-feature-pill">
+                                    <i class="bi bi-box-seam text-emerald"></i>
+                                    <span>PO &rarr; GRN Stock Sync</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="login-feature-pill">
+                                    <i class="bi bi-journal-check text-warning"></i>
+                                    <span>Customer &amp; Supplier Ledgers</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="login-feature-pill">
+                                    <i class="bi bi-shield-check text-info"></i>
+                                    <span>Role &amp; Permission Matrix</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- One-Click Demo Accounts -->
+                    <div class="login-demo-box rounded-3 p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small fw-bold text-white">
+                                <i class="bi bi-lightning-charge-fill text-warning me-1"></i> Instant Demo Access (Click any role)
+                            </span>
+                            <span class="badge bg-info text-dark" style="font-size: 0.68rem;">1-Click Fill &amp; Sign In</span>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-sm-6">
+                                <button type="button" class="login-role-btn w-100 text-start" onclick="fillAndSubmit('admin','Admin@123')">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-white"><i class="bi bi-shield-lock-fill text-warning me-1"></i>Administrator</span>
+                                        <span class="badge bg-warning text-dark">Full Access</span>
+                                    </div>
+                                    <div class="small text-white-50 mt-1"><code>admin</code> / <code>Admin@123</code></div>
+                                </button>
+                            </div>
+                            <div class="col-sm-6">
+                                <button type="button" class="login-role-btn w-100 text-start" onclick="fillAndSubmit('manager','Staff@123')">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold text-white"><i class="bi bi-person-Check-fill text-info me-1"></i>Store Manager</span>
+                                        <span class="badge bg-info text-dark">Overrides</span>
+                                    </div>
+                                    <div class="small text-white-50 mt-1"><code>manager</code> / <code>Staff@123</code></div>
+                                </button>
+                            </div>
+                            <div class="col-sm-4">
+                                <button type="button" class="login-role-btn w-100 text-start" onclick="fillAndSubmit('cashier','Staff@123')">
+                                    <div class="fw-bold text-white small"><i class="bi bi-pc-display-horizontal text-success me-1"></i>Cashier</div>
+                                    <div class="text-white-50" style="font-size:0.7rem;"><code>cashier</code></div>
+                                </button>
+                            </div>
+                            <div class="col-sm-4">
+                                <button type="button" class="login-role-btn w-100 text-start" onclick="fillAndSubmit('inventory','Staff@123')">
+                                    <div class="fw-bold text-white small"><i class="bi bi-boxes text-primary me-1"></i>Inventory</div>
+                                    <div class="text-white-50" style="font-size:0.7rem;"><code>inventory</code></div>
+                                </button>
+                            </div>
+                            <div class="col-sm-4">
+                                <button type="button" class="login-role-btn w-100 text-start" onclick="fillAndSubmit('accountant','Staff@123')">
+                                    <div class="fw-bold text-white small"><i class="bi bi-calculator text-danger me-1"></i>Accounts</div>
+                                    <div class="text-white-50" style="font-size:0.7rem;"><code>accountant</code></div>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sign-In Form Panel -->
+                <div class="col-lg-6 bg-white p-4 p-md-5 d-flex flex-column justify-content-center">
+                    <div class="mb-4">
+                        <span class="badge bg-primary-subtle text-primary fw-semibold px-3 py-1 rounded-pill mb-2">
+                            <i class="bi bi-lock-fill me-1"></i> Secure Staff Terminal
+                        </span>
+                        <h3 class="fw-bold text-dark mb-1">Welcome Back</h3>
+                        <p class="text-muted small mb-0">Sign in with your operator credentials to open the workspace</p>
+                    </div>
+
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small rounded-3"></div>
+
+                    <form asp-controller="Account" asp-action="Login" method="post" id="loginForm">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" asp-for="ReturnUrl" />
+
+                        <div class="mb-3">
+                            <label asp-for="Username" class="form-label fw-semibold small text-secondary">USERNAME</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light border-end-0 text-secondary"><i class="bi bi-person-fill"></i></span>
+                                <input asp-for="Username" id="loginUsername" class="form-control border-start-0 ps-0 fs-6" placeholder="e.g. admin or cashier" autofocus />
+                            </div>
+                            <span asp-validation-for="Username" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label fw-semibold small text-secondary">PASSWORD</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light border-end-0 text-secondary"><i class="bi bi-key-fill"></i></span>
+                                <input asp-for="Password" id="loginPassword" type="password" class="form-control border-start-0 border-end-0 ps-0 fs-6" placeholder="Enter your password" />
+                                <button class="btn btn-light border border-start-0 text-secondary" type="button" onclick="togglePassword()" title="Show/Hide Password">
+                                    <i class="bi bi-eye" id="togglePwdIcon"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div class="form-check">
+                                <input asp-for="RememberMe" class="form-check-input" />
+                                <label asp-for="RememberMe" class="form-check-label small fw-medium text-secondary">Keep me signed in (8h shift)</label>
+                            </div>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                <i class="bi bi-database-check me-1"></i>SQLite Ready
+                            </span>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm login-submit-btn">
+                            <i class="bi bi-box-arrow-in-right me-2"></i> Sign In to Terminal
+                        </button>
+                    </form>
+
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center text-muted small">
+                        <span><i class="bi bi-cpu me-1"></i>.NET 8 MVC + EF Core 8</span>
+                        <span>Default: <code>admin</code> / <code>Admin@123</code></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function fillAndSubmit(u, p) {
+        document.getElementById('loginUsername').value = u;
+        document.getElementById('loginPassword').value = p;
+        document.getElementById('loginForm').submit();
+    }
+    function togglePassword() {
+        const input = document.getElementById('loginPassword');
+        const icon = document.getElementById('togglePwdIcon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'bi bi-eye';
+        }
+    }
+</script>

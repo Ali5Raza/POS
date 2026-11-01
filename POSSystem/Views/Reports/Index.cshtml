@@ -1,0 +1,478 @@
+@{
+    var filter = ViewBag.Filter as ReportFilterViewModel ?? new ReportFilterViewModel();
+    ViewData["Title"] = $"Reports Center - {filter.ReportType}";
+
+    var sales = ViewBag.Sales as List<Sale> ?? new List<Sale>();
+    var salesReturns = ViewBag.SalesReturns as List<SalesReturn> ?? new List<SalesReturn>();
+    var purchases = ViewBag.Purchases as List<GoodsReceipt> ?? new List<GoodsReceipt>();
+    var purchaseReturns = ViewBag.PurchaseReturns as List<PurchaseReturn> ?? new List<PurchaseReturn>();
+    var products = ViewBag.Products as List<Product> ?? new List<Product>();
+    var movements = ViewBag.Movements as List<StockMovement> ?? new List<StockMovement>();
+    var adjustments = ViewBag.Adjustments as List<StockAdjustment> ?? new List<StockAdjustment>();
+    var expenses = ViewBag.Expenses as List<Expense> ?? new List<Expense>();
+    var payments = ViewBag.Payments as List<Payment> ?? new List<Payment>();
+    var customers = ViewBag.CustomerList as List<Customer> ?? new List<Customer>();
+    var suppliers = ViewBag.SupplierList as List<Supplier> ?? new List<Supplier>();
+
+    decimal totalSalesAmt = sales.Sum(s => s.TotalAmount);
+    decimal totalSalesReturnsAmt = salesReturns.Sum(sr => sr.TotalRefundAmount);
+    decimal netSalesAmt = totalSalesAmt - totalSalesReturnsAmt;
+    decimal totalCogsAmt = sales.SelectMany(s => s.Items).Sum(i => (i.Quantity - i.ReturnedQuantity) * i.UnitCost);
+    decimal grossProfitAmt = netSalesAmt - totalCogsAmt;
+    decimal totalExpensesAmt = expenses.Sum(e => e.Amount);
+    decimal netProfitAmt = grossProfitAmt - totalExpensesAmt;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2 no-print">
+    <div>
+        <h4 class="fw-bold mb-0">Business Intelligence &amp; Reports Center</h4>
+        <span class="text-muted small">Sales, Purchasing, Inventory Valuation &amp; Financial Statements with Print &amp; CSV/Excel Export</span>
+    </div>
+    <div class="d-flex gap-2">
+        @if (User.HasPermission(PermissionCodes.ExportReports))
+        {
+            <a asp-action="Index"
+               asp-route-reportType="@filter.ReportType"
+               asp-route-startDate="@filter.StartDate.ToString("yyyy-MM-dd")"
+               asp-route-endDate="@filter.EndDate.ToString("yyyy-MM-dd")"
+               asp-route-search="@filter.Search"
+               asp-route-export="csv"
+               class="btn btn-success btn-sm fw-bold">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV / Excel
+            </a>
+        }
+        <button type="button" class="btn btn-outline-dark btn-sm fw-semibold" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Print / Save PDF
+        </button>
+    </div>
+</div>
+
+<!-- Report Selector & Filters -->
+<div class="card mb-3 no-print">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-bold mb-1">Select Report Type</label>
+                <select name="reportType" class="form-select form-select-sm fw-semibold" onchange="this.form.submit()">
+                    <optgroup label="Sales Reports">
+                        <option value="DailySales" selected="@(filter.ReportType == "DailySales")">Daily Sales Report</option>
+                        <option value="MonthlySales" selected="@(filter.ReportType == "MonthlySales")">Monthly Sales Summary</option>
+                        <option value="DateRangeSales" selected="@(filter.ReportType == "DateRangeSales")">Date Range Sales</option>
+                        <option value="ProductSales" selected="@(filter.ReportType == "ProductSales")">Product Sales Breakdown</option>
+                        <option value="CategorySales" selected="@(filter.ReportType == "CategorySales")">Category Sales Breakdown</option>
+                        <option value="CustomerSales" selected="@(filter.ReportType == "CustomerSales")">Customer Sales Report</option>
+                        <option value="CashierSales" selected="@(filter.ReportType == "CashierSales")">Cashier Performance Report</option>
+                        <option value="PaymentMethodSales" selected="@(filter.ReportType == "PaymentMethodSales")">Payment Method Sales</option>
+                        <option value="SalesReturns" selected="@(filter.ReportType == "SalesReturns")">Sales Returns Report</option>
+                        <option value="NetSales" selected="@(filter.ReportType == "NetSales")">Net Sales Report</option>
+                    </optgroup>
+                    <optgroup label="Purchase Reports">
+                        <option value="PurchaseReport" selected="@(filter.ReportType == "PurchaseReport")">Purchase / GRN Report</option>
+                        <option value="SupplierPurchaseReport" selected="@(filter.ReportType == "SupplierPurchaseReport")">Supplier Purchase Summary</option>
+                        <option value="PurchaseReturns" selected="@(filter.ReportType == "PurchaseReturns")">Purchase Returns Report</option>
+                        <option value="PurchaseSummary" selected="@(filter.ReportType == "PurchaseSummary")">Purchase Summary</option>
+                    </optgroup>
+                    <optgroup label="Inventory Reports">
+                        <option value="CurrentStock" selected="@(filter.ReportType == "CurrentStock")">Current Stock Report</option>
+                        <option value="StockValuation" selected="@(filter.ReportType == "StockValuation")">Stock Valuation Report</option>
+                        <option value="StockLedger" selected="@(filter.ReportType == "StockLedger")">Stock Ledger / Movement</option>
+                        <option value="LowStock" selected="@(filter.ReportType == "LowStock")">Low Stock Report</option>
+                        <option value="OutOfStock" selected="@(filter.ReportType == "OutOfStock")">Out of Stock Report</option>
+                        <option value="ProductProfitability" selected="@(filter.ReportType == "ProductProfitability")">Product Profitability</option>
+                        <option value="StockAdjustments" selected="@(filter.ReportType == "StockAdjustments")">Stock Adjustments</option>
+                    </optgroup>
+                    <optgroup label="Financial Reports">
+                        <option value="ProfitAndLoss" selected="@(filter.ReportType == "ProfitAndLoss")">Profit &amp; Loss (P&amp;L) Statement</option>
+                        <option value="CashFlow" selected="@(filter.ReportType == "CashFlow")">Cash Flow &amp; Payments</option>
+                        <option value="Expenses" selected="@(filter.ReportType == "Expenses")">Expenses Report</option>
+                        <option value="CustomerReceivables" selected="@(filter.ReportType == "CustomerReceivables")">Customer Receivables</option>
+                        <option value="SupplierPayables" selected="@(filter.ReportType == "SupplierPayables")">Supplier Payables</option>
+                    </optgroup>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold mb-1">Start Date</label>
+                <input type="date" name="startDate" value="@filter.StartDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold mb-1">End Date</label>
+                <input type="date" name="endDate" value="@filter.EndDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold mb-1">Search Keyword</label>
+                <input type="text" name="search" value="@filter.Search" class="form-control form-control-sm" placeholder="Filter by Invoice, Product, Party..." />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100 fw-semibold">Run Report</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- KPI Summary Cards for Selected Period -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Gross Sales (@sales.Count txns)</div>
+            <div class="kpi-value text-primary">@totalSalesAmt.ToString("N2")</div>
+            <div class="small text-muted">Returns: @totalSalesReturnsAmt.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Net Sales Revenue</div>
+            <div class="kpi-value text-dark">@netSalesAmt.ToString("N2")</div>
+            <div class="small text-muted">COGS: @totalCogsAmt.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Gross Profit</div>
+            <div class="kpi-value text-success">@grossProfitAmt.ToString("N2")</div>
+            <div class="small text-muted">Expenses: @totalExpensesAmt.ToString("N2")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label">Net Profit</div>
+            <div class="kpi-value @(netProfitAmt >= 0 ? "text-success" : "text-danger")">@netProfitAmt.ToString("N2")</div>
+            <div class="small text-muted">Period: @filter.StartDate.ToString("dd MMM") - @filter.EndDate.ToString("dd MMM yyyy")</div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Report Body -->
+<div class="card">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold">Report Output: <span class="text-primary">@filter.ReportType</span></h6>
+        <span class="small text-muted">Generated @DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm")</span>
+    </div>
+    <div class="table-responsive">
+        @if (filter.ReportType == "ProfitAndLoss" || filter.ReportType == "NetSales")
+        {
+            <table class="table table-bordered mb-0">
+                <tbody>
+                    <tr><td class="fw-bold">Gross Retail &amp; Wholesale Sales</td><td class="text-end fw-bold">@totalSalesAmt.ToString("N2")</td></tr>
+                    <tr><td class="text-danger">Less: Sales Returns &amp; Allowances</td><td class="text-end text-danger">-@totalSalesReturnsAmt.ToString("N2")</td></tr>
+                    <tr class="table-light"><td class="fw-bold">Net Sales Revenue</td><td class="text-end fw-bold">@netSalesAmt.ToString("N2")</td></tr>
+                    <tr><td>Less: Cost of Goods Sold (COGS)</td><td class="text-end">-@totalCogsAmt.ToString("N2")</td></tr>
+                    <tr class="table-success"><td class="fw-bold">Gross Profit</td><td class="text-end fw-bold">@grossProfitAmt.ToString("N2")</td></tr>
+                    <tr><td>Less: Operating Expenses</td><td class="text-end text-danger">-@totalExpensesAmt.ToString("N2")</td></tr>
+                    <tr class="table-primary fs-5"><td class="fw-extrabold">Net Profit / (Loss)</td><td class="text-end fw-extrabold">@netProfitAmt.ToString("N2")</td></tr>
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "ProductSales" || filter.ReportType == "ProductProfitability")
+        {
+            var prodBreakdown = sales.SelectMany(s => s.Items)
+                .GroupBy(i => new { i.ProductId, Name = i.Product?.Name ?? $"Product #{i.ProductId}", SKU = i.Product?.SKU ?? "-" })
+                .Select(g => new
+                {
+                    g.Key.SKU,
+                    g.Key.Name,
+                    SoldQty = g.Sum(x => x.Quantity - x.ReturnedQuantity),
+                    Revenue = g.Sum(x => x.LineTotal),
+                    Cost = g.Sum(x => (x.Quantity - x.ReturnedQuantity) * x.UnitCost)
+                })
+                .OrderByDescending(x => x.Revenue)
+                .ToList();
+
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Product</th>
+                        <th class="text-end">Net Sold Qty</th>
+                        <th class="text-end">Revenue</th>
+                        <th class="text-end">COGS</th>
+                        <th class="text-end">Gross Profit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in prodBreakdown)
+                    {
+                        <tr>
+                            <td>@row.SKU</td>
+                            <td class="fw-semibold">@row.Name</td>
+                            <td class="text-end fw-bold">@row.SoldQty.ToString("N0")</td>
+                            <td class="text-end">@row.Revenue.ToString("N2")</td>
+                            <td class="text-end">@row.Cost.ToString("N2")</td>
+                            <td class="text-end fw-bold text-success">@((row.Revenue - row.Cost).ToString("N2"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "CategorySales")
+        {
+            var catBreakdown = sales.SelectMany(s => s.Items)
+                .GroupBy(i => i.Product?.Category?.Name ?? "Uncategorized")
+                .Select(g => new { Category = g.Key, Qty = g.Sum(x => x.Quantity), Revenue = g.Sum(x => x.LineTotal) })
+                .OrderByDescending(x => x.Revenue)
+                .ToList();
+
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Category</th><th class="text-end">Units Sold</th><th class="text-end">Total Revenue</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in catBreakdown)
+                    {
+                        <tr><td class="fw-bold">@c.Category</td><td class="text-end">@c.Qty.ToString("N0")</td><td class="text-end fw-bold">@c.Revenue.ToString("N2")</td></tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "CashierSales" || filter.ReportType == "PaymentMethodSales" || filter.ReportType == "CustomerSales")
+        {
+            var grouped = sales.GroupBy(s =>
+                filter.ReportType == "CashierSales" ? (s.Cashier?.FullName ?? "System") :
+                filter.ReportType == "PaymentMethodSales" ? s.PaymentMethod :
+                (s.Customer?.Name ?? "Walk-in Customer"))
+                .Select(g => new { Key = g.Key, Count = g.Count(), Total = g.Sum(x => x.TotalAmount), Paid = g.Sum(x => x.PaidAmount), Due = g.Sum(x => x.DueAmount) })
+                .OrderByDescending(x => x.Total)
+                .ToList();
+
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Group</th><th class="text-end">Invoices</th><th class="text-end">Total Sales</th><th class="text-end">Paid</th><th class="text-end">Due</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var g in grouped)
+                    {
+                        <tr>
+                            <td class="fw-bold">@g.Key</td>
+                            <td class="text-end">@g.Count</td>
+                            <td class="text-end fw-bold">@g.Total.ToString("N2")</td>
+                            <td class="text-end text-success">@g.Paid.ToString("N2")</td>
+                            <td class="text-end text-danger">@g.Due.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "PurchaseReport" || filter.ReportType == "SupplierPurchaseReport" || filter.ReportType == "PurchaseSummary")
+        {
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>GRN #</th><th>Date</th><th>Supplier</th><th class="text-end">Total</th><th class="text-end">Paid</th><th class="text-end">Due</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var g in purchases)
+                    {
+                        <tr>
+                            <td class="fw-bold">@g.GRNNumber</td>
+                            <td>@g.ReceivingDate.ToString("yyyy-MM-dd")</td>
+                            <td>@g.Supplier?.CompanyName</td>
+                            <td class="text-end fw-bold">@g.TotalAmount.ToString("N2")</td>
+                            <td class="text-end text-success">@g.PaidAmount.ToString("N2")</td>
+                            <td class="text-end text-danger">@g.DueAmount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "CurrentStock" || filter.ReportType == "StockValuation" || filter.ReportType == "LowStock" || filter.ReportType == "OutOfStock")
+        {
+            var filteredProds = filter.ReportType == "LowStock" ? products.Where(p => p.CurrentStock > 0 && p.CurrentStock <= p.MinimumStockLevel).ToList()
+                : filter.ReportType == "OutOfStock" ? products.Where(p => p.CurrentStock <= 0).ToList()
+                : products;
+
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th class="text-end">Stock</th>
+                        <th class="text-end">Unit Cost</th>
+                        <th class="text-end">Sale Price</th>
+                        <th class="text-end">Cost Valuation</th>
+                        <th class="text-end">Retail Valuation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in filteredProds)
+                    {
+                        <tr>
+                            <td>@p.SKU</td>
+                            <td class="fw-semibold">@p.Name</td>
+                            <td>@p.Category?.Name</td>
+                            <td class="text-end fw-bold">@p.CurrentStock.ToString("N0") @p.Unit</td>
+                            <td class="text-end">@p.CostPrice.ToString("N2")</td>
+                            <td class="text-end">@p.SalePrice.ToString("N2")</td>
+                            <td class="text-end fw-bold">@((Math.Max(0, p.CurrentStock) * p.CostPrice).ToString("N2"))</td>
+                            <td class="text-end text-primary fw-semibold">@((Math.Max(0, p.CurrentStock) * p.SalePrice).ToString("N2"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "StockLedger" || filter.ReportType == "StockMovement")
+        {
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Date</th><th>Product</th><th>Type</th><th>Reference</th><th class="text-end">In</th><th class="text-end">Out</th><th class="text-end">Balance</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in movements)
+                    {
+                        <tr>
+                            <td>@m.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="fw-semibold">@m.Product?.Name</td>
+                            <td>@m.TransactionType</td>
+                            <td>@m.ReferenceNumber</td>
+                            <td class="text-end text-success">@m.QuantityIn.ToString("N0")</td>
+                            <td class="text-end text-danger">@m.QuantityOut.ToString("N0")</td>
+                            <td class="text-end fw-bold">@m.BalanceAfter.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "StockAdjustments")
+        {
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Adjustment #</th><th>Date</th><th>Product</th><th>Type</th><th class="text-end">Prev</th><th class="text-end">Qty</th><th class="text-end">New</th><th>Reason</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var a in adjustments)
+                    {
+                        <tr>
+                            <td class="fw-bold">@a.AdjustmentNumber</td>
+                            <td>@a.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@a.Product?.Name</td>
+                            <td>@a.AdjustmentType</td>
+                            <td class="text-end">@a.PreviousQuantity.ToString("N0")</td>
+                            <td class="text-end fw-bold">@a.Quantity.ToString("N0")</td>
+                            <td class="text-end fw-bold">@a.NewQuantity.ToString("N0")</td>
+                            <td>@a.Reason</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "CustomerReceivables")
+        {
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Customer</th><th>Phone</th><th>Email</th><th class="text-end">Credit Limit</th><th class="text-end">Receivable Balance</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in customers)
+                    {
+                        <tr>
+                            <td class="fw-bold">@c.Name</td>
+                            <td>@c.Phone</td>
+                            <td>@c.Email</td>
+                            <td class="text-end">@c.CreditLimit.ToString("N2")</td>
+                            <td class="text-end fw-bold @(c.CurrentBalance > 0 ? "text-danger" : "text-success")">@c.CurrentBalance.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "SupplierPayables")
+        {
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Supplier Company</th><th>Contact Person</th><th>Phone</th><th>NTN</th><th class="text-end">Payable Balance</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in suppliers)
+                    {
+                        <tr>
+                            <td class="fw-bold">@s.CompanyName</td>
+                            <td>@s.Name</td>
+                            <td>@s.Phone</td>
+                            <td>@s.TaxNumber</td>
+                            <td class="text-end fw-bold @(s.CurrentBalance > 0 ? "text-danger" : "text-success")">@s.CurrentBalance.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "Expenses")
+        {
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Expense #</th><th>Date</th><th>Category</th><th>Description</th><th>Method</th><th class="text-end">Amount</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in expenses)
+                    {
+                        <tr>
+                            <td class="fw-bold">@e.ExpenseNumber</td>
+                            <td>@e.ExpenseDate.ToString("yyyy-MM-dd")</td>
+                            <td>@e.ExpenseCategory?.Name</td>
+                            <td>@e.Description</td>
+                            <td>@e.PaymentMethod</td>
+                            <td class="text-end fw-bold text-danger">@e.Amount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (filter.ReportType == "Payments" || filter.ReportType == "CashFlow")
+        {
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Payment #</th><th>Date</th><th>Type</th><th>Party</th><th>Method</th><th class="text-end">Amount</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in payments)
+                    {
+                        <tr>
+                            <td class="fw-bold">@p.PaymentNumber</td>
+                            <td>@p.PaymentDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@p.PaymentType</td>
+                            <td>@(p.Customer?.Name ?? p.Supplier?.CompanyName ?? "-")</td>
+                            <td>@p.PaymentMethod</td>
+                            <td class="text-end fw-bold">@p.Amount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <!-- Default: Sales Invoices Report -->
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Date / Time</th>
+                        <th>Customer</th>
+                        <th>Cashier</th>
+                        <th>Method</th>
+                        <th class="text-end">SubTotal</th>
+                        <th class="text-end">Discount</th>
+                        <th class="text-end">Tax</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Paid</th>
+                        <th class="text-end">Due</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in sales)
+                    {
+                        <tr>
+                            <td class="fw-bold">@s.InvoiceNumber</td>
+                            <td>@s.SaleDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@(s.Customer?.Name ?? "Walk-in")</td>
+                            <td>@(s.Cashier?.FullName ?? "System")</td>
+                            <td>@s.PaymentMethod</td>
+                            <td class="text-end">@s.SubTotal.ToString("N2")</td>
+                            <td class="text-end text-danger">@s.DiscountAmount.ToString("N2")</td>
+                            <td class="text-end">@s.TaxAmount.ToString("N2")</td>
+                            <td class="text-end fw-bold">@s.TotalAmount.ToString("N2")</td>
+                            <td class="text-end text-success">@s.PaidAmount.ToString("N2")</td>
+                            <td class="text-end @(s.DueAmount > 0 ? "text-danger fw-bold" : "")">@s.DueAmount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

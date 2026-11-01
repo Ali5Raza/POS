@@ -1,0 +1,132 @@
+@model List<ProductCategory>
+@{
+    ViewData["Title"] = "Product Categories";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Product Categories</h4>
+        <span class="text-muted small">Organize retail products into top-level and nested categories</span>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold" id="catFormTitle">Add / Edit Category</h6>
+            </div>
+            <div class="card-body">
+                <form asp-action="Save" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="Id" id="catIdInput" value="0" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Category Name *</label>
+                        <input type="text" name="Name" id="catNameInput" class="form-control" required placeholder="e.g., Beverages & Drinks" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Parent Category (Optional)</label>
+                        <select name="ParentCategoryId" id="catParentInput" asp-items="@ViewBag.ParentCategories" class="form-select">
+                            <option value="">-- Top-Level Category --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Description</label>
+                        <textarea name="Description" id="catDescInput" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="IsActive" id="catActiveInput" class="form-check-input" value="true" checked />
+                        <label class="form-check-label small fw-semibold" for="catActiveInput">Active</label>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100 fw-semibold">Save Category</button>
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetCatForm()">Reset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white py-2">
+                <form method="get" class="d-flex gap-2">
+                    <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Search categories..." />
+                    <button type="submit" class="btn btn-sm btn-primary">Search</button>
+                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category Name</th>
+                            <th>Parent Category</th>
+                            <th>Description</th>
+                            <th class="text-center">Products</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@c.Name</td>
+                                <td>
+                                    @if (c.ParentCategory != null)
+                                    {
+                                        <span class="badge bg-info-subtle text-dark border">@c.ParentCategory.Name</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">Root</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">@c.Description</td>
+                                <td class="text-center"><span class="badge bg-primary rounded-pill">@c.Products.Count</span></td>
+                                <td>
+                                    <span class="badge @(c.IsActive ? "bg-success" : "bg-secondary")">@(c.IsActive ? "Active" : "Inactive")</span>
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary"
+                                                onclick="editCat(@c.Id, '@Html.Raw(c.Name.Replace("'", "\\'"))', '@(c.ParentCategoryId?.ToString() ?? "")', '@Html.Raw((c.Description ?? "").Replace("'", "\\'"))', @(c.IsActive.ToString().ToLower()))">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form asp-action="ToggleActive" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@c.Id" />
+                                            <button type="submit" class="btn @(c.IsActive ? "btn-outline-danger" : "btn-outline-success")">
+                                                <i class="bi @(c.IsActive ? "bi-slash-circle" : "bi-check-circle")"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function editCat(id, name, parentId, desc, isActive) {
+        document.getElementById('catFormTitle').textContent = 'Edit Category: ' + name;
+        document.getElementById('catIdInput').value = id;
+        document.getElementById('catNameInput').value = name;
+        document.getElementById('catParentInput').value = parentId;
+        document.getElementById('catDescInput').value = desc;
+        document.getElementById('catActiveInput').checked = isActive;
+    }
+    function resetCatForm() {
+        document.getElementById('catFormTitle').textContent = 'Add / Edit Category';
+        document.getElementById('catIdInput').value = '0';
+        document.getElementById('catNameInput').value = '';
+        document.getElementById('catParentInput').value = '';
+        document.getElementById('catDescInput').value = '';
+        document.getElementById('catActiveInput').checked = true;
+    }
+</script>

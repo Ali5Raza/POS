@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 56" width="220" height="56">
+  <defs>
+    <linearGradient id="posGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f766e"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="4" width="48" height="48" rx="12" fill="url(#posGrad)"/>
+  <path d="M14 18h24v6H14zm0 10h16v6H14zm0 10h24v4H14zm20-10h6v6h-6z" fill="#ffffff"/>
+  <text x="60" y="28" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="800" font-size="20" fill="#0f172a">APEX RETAIL</text>
+  <text x="60" y="44" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="600" font-size="11" letter-spacing="1.5" fill="#0f766e">POS &amp; INVENTORY ERP</text>
+</svg>

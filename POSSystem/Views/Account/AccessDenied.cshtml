@@ -1,0 +1,28 @@
+@{
+    ViewData["Title"] = "Access Denied";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm text-center p-5">
+            <div class="mb-3">
+                <span class="bg-danger-subtle text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width:72px;height:72px;">
+                    <i class="bi bi-shield-lock-fill fs-1"></i>
+                </span>
+            </div>
+            <h3 class="fw-bold text-dark">Access Restricted</h3>
+            <p class="text-muted mb-4">
+                Your user role does not have the required permission to access this screen or action.
+                Please contact your store administrator if you need elevated privileges.
+            </p>
+            <div class="d-flex justify-content-center gap-2">
+                <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary px-4">
+                    <i class="bi bi-speedometer2 me-1"></i>Return to Dashboard
+                </a>
+                <a asp-controller="POS" asp-action="Index" class="btn btn-outline-secondary px-4">
+                    <i class="bi bi-pc-display-horizontal me-1"></i>POS Terminal
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,158 @@
+@model SalesReturnViewModel
+@{
+    ViewData["Title"] = "Process Sales Return";
+    var recentSales = ViewBag.RecentSales as List<Sale> ?? new List<Sale>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Process Customer Sales Return</h4>
+        <span class="text-muted small">Find invoice &rarr; select items &rarr; enter return quantities &rarr; confirm refund &amp; restock inventory</span>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to Returns</a>
+</div>
+
+<!-- Step 1: Select or Find Original Invoice -->
+<div class="card mb-3">
+    <div class="card-body py-3">
+        <form method="get" asp-action="Create" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small fw-bold mb-1">Select Recent Invoice</label>
+                <select name="saleId" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @foreach (var s in recentSales)
+                    {
+                        <option value="@s.Id" selected="@(Model.SaleId == s.Id)">
+                            @s.InvoiceNumber - @(s.Customer?.Name ?? "Walk-in") (@s.SaleDate.ToString("dd MMM HH:mm")) - Total: @s.TotalAmount.ToString("N2")
+                        </option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-bold mb-1">Or Find by Invoice Number</label>
+                <input type="text" name="invoiceNumber" class="form-control form-control-sm" placeholder="Enter e.g. INV-202610-0001" />
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-sm btn-primary w-100 fw-semibold">
+                    <i class="bi bi-search me-1"></i> Load Invoice Items
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.SaleId > 0)
+{
+    <form asp-action="Create" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="SaleId" />
+        <input type="hidden" asp-for="InvoiceNumber" />
+        <input type="hidden" asp-for="CustomerId" />
+        <input type="hidden" asp-for="CustomerName" />
+
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">Items from Invoice <span class="text-primary">@Model.InvoiceNumber</span> (@Model.CustomerName)</h6>
+                        <span class="small text-muted">Enter Return Quantity for items being returned</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Sold Qty</th>
+                                    <th class="text-end">Prev Returned</th>
+                                    <th class="text-end">Max Returnable</th>
+                                    <th class="text-end">Unit Price</th>
+                                    <th class="text-center" style="width: 130px;">Return Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Items.Count; i++)
+                                {
+                                    <tr>
+                                        <td>
+                                            <input type="hidden" asp-for="Items[i].SaleItemId" />
+                                            <input type="hidden" asp-for="Items[i].ProductId" />
+                                            <input type="hidden" asp-for="Items[i].ProductName" />
+                                            <input type="hidden" asp-for="Items[i].SKU" />
+                                            <input type="hidden" asp-for="Items[i].SoldQuantity" />
+                                            <input type="hidden" asp-for="Items[i].AlreadyReturnedQuantity" />
+                                            <input type="hidden" asp-for="Items[i].UnitPrice" />
+                                            <input type="hidden" asp-for="Items[i].TaxRate" />
+                                            <div class="fw-semibold">@Model.Items[i].ProductName</div>
+                                            <small class="text-muted">@Model.Items[i].SKU</small>
+                                        </td>
+                                        <td class="text-end">@Model.Items[i].SoldQuantity.ToString("N0")</td>
+                                        <td class="text-end text-muted">@Model.Items[i].AlreadyReturnedQuantity.ToString("N0")</td>
+                                        <td class="text-end fw-bold text-primary">@Model.Items[i].MaxReturnableQuantity.ToString("N0")</td>
+                                        <td class="text-end">@Model.Items[i].UnitPrice.ToString("N2")</td>
+                                        <td>
+                                            <input asp-for="Items[i].ReturnQuantity" type="number" class="form-control form-control-sm text-center fw-bold return-qty-input"
+                                                   min="0" max="@Model.Items[i].MaxReturnableQuantity" step="1"
+                                                   data-price="@Model.Items[i].UnitPrice" data-tax="@Model.Items[i].TaxRate"
+                                                   oninput="calcSalesReturnRefund()" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">Return Details &amp; Refund</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label asp-for="Reason" class="form-label small fw-bold">Return Reason *</label>
+                            <input asp-for="Reason" class="form-control form-control-sm" placeholder="e.g., Damaged packaging / Customer exchange" required />
+                            <span asp-validation-for="Reason" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="RefundMethod" class="form-label small fw-bold">Refund Method</label>
+                            <select asp-for="RefundMethod" class="form-select form-select-sm">
+                                <option value="Cash">Cash Refund</option>
+                                <option value="Card">Card Refund</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="CustomerCredit">Adjust Customer Credit Balance</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Notes" class="form-label small fw-bold">Notes</label>
+                            <textarea asp-for="Notes" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <div class="bg-light border rounded p-3 mb-3 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold">Estimated Refund:</span>
+                            <span class="fs-4 fw-extrabold text-danger" id="estRefundDisplay">0.00</span>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                            <i class="bi bi-check2-circle me-1"></i> Confirm Sales Return
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+}
+
+<script>
+    function calcSalesReturnRefund() {
+        let total = 0;
+        document.querySelectorAll('.return-qty-input').forEach(inp => {
+            const qty = parseFloat(inp.value) || 0;
+            const price = parseFloat(inp.getAttribute('data-price')) || 0;
+            const tax = parseFloat(inp.getAttribute('data-tax')) || 0;
+            const sub = qty * price;
+            total += sub + (sub * (tax / 100));
+        });
+        const el = document.getElementById('estRefundDisplay');
+        if (el) el.textContent = total.toFixed(2);
+    }
+</script>

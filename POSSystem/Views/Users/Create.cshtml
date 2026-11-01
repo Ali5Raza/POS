@@ -1,0 +1,50 @@
+@model UserCreateViewModel
+@{
+    ViewData["Title"] = "Create User";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-bold mb-0">Create User Account</h4>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">Back to Users</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2 small"></div>
+        <form asp-action="Create" method="post" class="row g-3">
+            @Html.AntiForgeryToken()
+            <div class="col-md-4">
+                <label asp-for="Username" class="form-label small fw-bold">Username *</label>
+                <input asp-for="Username" class="form-control" required />
+                <span asp-validation-for="Username" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="FullName" class="form-label small fw-bold">Full Name *</label>
+                <input asp-for="FullName" class="form-control" required />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Email" class="form-label small fw-bold">Email *</label>
+                <input asp-for="Email" class="form-control" required />
+            </div>
+            <div class="col-md-4">
+                <label asp-for="RoleId" class="form-label small fw-bold">Role *</label>
+                <select asp-for="RoleId" asp-items="@ViewBag.Roles" class="form-select" required></select>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="Password" class="form-label small fw-bold">Initial Password *</label>
+                <input asp-for="Password" class="form-control" required />
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div class="form-check mb-2">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label asp-for="IsActive" class="form-check-label fw-semibold">Active Account</label>
+                </div>
+            </div>
+            <div class="col-12 d-flex justify-content-end gap-2 pt-2 border-top">
+                <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary fw-bold px-4">Create User</button>
+            </div>
+        </form>
+    </div>
+</div>

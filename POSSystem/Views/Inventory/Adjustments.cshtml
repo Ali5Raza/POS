@@ -1,0 +1,110 @@
+@model PaginatedList<StockAdjustment>
+@{
+    ViewData["Title"] = "Stock Management & Adjustments";
+    var products = ViewBag.Products as List<Product> ?? new List<Product>();
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Stock Management &amp; Adjustments</h4>
+        <span class="text-muted small">Authorized physical stock increase or decrease with mandatory audit reason and stock ledger logging</span>
+    </div>
+    <a asp-action="Ledger" class="btn btn-outline-primary btn-sm">View Stock Ledger</a>
+</div>
+
+<div class="row g-3">
+    @if (User.HasPermission(PermissionCodes.AdjustInventory))
+    {
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-white py-3">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-sliders me-2 text-primary"></i>Perform Stock Adjustment</h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Adjust" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Product *</label>
+                            <select name="ProductId" class="form-select" required>
+                                <option value="">-- Select Product --</option>
+                                @foreach (var p in products)
+                                {
+                                    <option value="@p.Id">@p.SKU - @p.Name (Current: @p.CurrentStock.ToString("N0") @p.Unit)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Adjustment Type *</label>
+                            <select name="AdjustmentType" class="form-select" required>
+                                <option value="Increase">Stock Increase (+)</option>
+                                <option value="Decrease">Stock Decrease (-)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Adjustment Quantity *</label>
+                            <input type="number" name="Quantity" class="form-control fw-bold" min="1" step="1" value="1" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Reason *</label>
+                            <input type="text" name="Reason" class="form-control" placeholder="e.g., Physical audit count / Damaged in store" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Notes</label>
+                            <textarea name="Notes" class="form-control" rows="2"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold">
+                            <i class="bi bi-check2-circle me-1"></i> Record Adjustment &amp; Update Stock
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="@(User.HasPermission(PermissionCodes.AdjustInventory) ? "col-lg-8" : "col-12")">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">Stock Adjustment History</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Adjustment #</th>
+                            <th>Date / Time</th>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th class="text-end">Prev Qty</th>
+                            <th class="text-end">Adj Qty</th>
+                            <th class="text-end">New Qty</th>
+                            <th>Reason</th>
+                            <th>User</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr><td colspan="9" class="text-center text-muted py-4">No stock adjustments recorded yet.</td></tr>
+                        }
+                        @foreach (var a in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">@a.AdjustmentNumber</td>
+                                <td>@a.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                                <td>@a.Product?.Name</td>
+                                <td>
+                                    <span class="badge @(a.AdjustmentType == "Increase" ? "bg-success" : "bg-danger")">@a.AdjustmentType</span>
+                                </td>
+                                <td class="text-end">@a.PreviousQuantity.ToString("N0")</td>
+                                <td class="text-end fw-bold">@a.Quantity.ToString("N0")</td>
+                                <td class="text-end fw-bold">@a.NewQuantity.ToString("N0")</td>
+                                <td>@a.Reason</td>
+                                <td>@(a.User?.Username ?? "System")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

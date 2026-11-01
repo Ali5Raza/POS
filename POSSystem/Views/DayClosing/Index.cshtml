@@ -1,0 +1,177 @@
+@model DayClosingViewModel
+@{
+    ViewData["Title"] = "Day Closing & Register Reconciliation";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <div>
+        <h4 class="fw-bold mb-0">Day Closing &amp; Cash Drawer Reconciliation</h4>
+        <span class="text-muted small">Reconcile daily sales, payments, expenses and refunds &mdash; locks finalized transactions for normal users</span>
+    </div>
+    <form method="get" class="d-flex align-items-center gap-2">
+        <label class="small fw-bold text-nowrap">Select Date:</label>
+        <input type="date" name="date" value="@Model.ClosingDate.ToString("yyyy-MM-dd")" class="form-control form-control-sm" onchange="this.form.submit()" />
+        <button type="button" class="btn btn-sm btn-outline-dark text-nowrap" onclick="window.print()">
+            <i class="bi bi-printer me-1"></i> Print Report
+        </button>
+    </form>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold">Day Summary: @Model.ClosingDate.ToString("dddd, dd MMM yyyy")</h6>
+                @if (Model.IsAlreadyClosed)
+                {
+                    <span class="badge bg-danger"><i class="bi bi-lock-fill me-1"></i>DAY CLOSED</span>
+                }
+                else
+                {
+                    <span class="badge bg-success"><i class="bi bi-unlock-fill me-1"></i>OPEN</span>
+                }
+            </div>
+            <div class="card-body">
+                <form asp-action="Close" method="post" onsubmit="return confirm('Confirm Day Closing? Once closed, normal users cannot add or modify transactions for this date.');">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="ClosingDate" />
+
+                    <div class="mb-2 d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold">Opening Cash:</span>
+                        <input asp-for="OpeningCash" type="number" step="0.01" class="form-control form-control-sm text-end fw-bold" style="width: 140px;" oninput="recalcDayClosing()" />
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between">
+                        <span class="text-muted">+ Cash Sales:</span>
+                        <strong class="text-success" id="dcCashSales" data-val="@Model.CashSales">@Model.CashSales.ToString("N2")</strong>
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between">
+                        <span class="text-muted">Card Sales (Non-Cash):</span>
+                        <span class="fw-semibold">@Model.CardSales.ToString("N2")</span>
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between">
+                        <span class="text-muted">Bank Sales (Non-Cash):</span>
+                        <span class="fw-semibold">@Model.BankSales.ToString("N2")</span>
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between">
+                        <span class="text-muted">+ Customer Cash Receipts:</span>
+                        <strong class="text-success" id="dcCustPay" data-val="@Model.CustomerPayments">@Model.CustomerPayments.ToString("N2")</strong>
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between">
+                        <span class="text-muted">- Cash Expenses:</span>
+                        <strong class="text-danger" id="dcExpenses" data-val="@Model.Expenses">-@Model.Expenses.ToString("N2")</strong>
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between">
+                        <span class="text-muted">- Cash Refunds:</span>
+                        <strong class="text-danger" id="dcRefunds" data-val="@Model.Refunds">-@Model.Refunds.ToString("N2")</strong>
+                    </div>
+                    <hr />
+                    <div class="mb-3 d-flex justify-content-between align-items-center bg-light p-2 rounded border">
+                        <span class="fw-bold">Expected Cash in Drawer:</span>
+                        <span class="fs-5 fw-extrabold text-primary" id="dcExpectedCash">@Model.ExpectedCash.ToString("N2")</span>
+                    </div>
+
+                    <div class="mb-3 d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Actual Physical Cash *:</span>
+                        <input asp-for="ActualCash" type="number" step="0.01" class="form-control text-end fw-bold fs-6" style="width: 150px;" required oninput="recalcDayClosing()" />
+                    </div>
+
+                    <div class="mb-3 d-flex justify-content-between align-items-center p-2 rounded border">
+                        <span class="fw-bold">Cash Difference (Short/Over):</span>
+                        <span class="fs-5 fw-bold @(Model.Difference == 0 ? "text-success" : "text-danger")" id="dcDifference">@Model.Difference.ToString("N2")</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label small fw-bold">Closing Notes</label>
+                        <input asp-for="Notes" class="form-control form-control-sm" placeholder="Register reconciliation remarks..." />
+                    </div>
+
+                    @if (!Model.IsAlreadyClosed)
+                    {
+                        <button type="submit" class="btn btn-primary w-100 fw-bold py-2">
+                            <i class="bi bi-lock-fill me-1"></i> Confirm &amp; Finalize Day Closing
+                        </button>
+                    }
+                </form>
+
+                @if (Model.IsAlreadyClosed && Model.ExistingRecord != null)
+                {
+                    <div class="alert alert-secondary small mt-3 mb-2">
+                        Closed by <strong>@(Model.ExistingRecord.ClosedByUser?.Username ?? "Admin")</strong> at @Model.ExistingRecord.ClosedAt.ToString("yyyy-MM-dd HH:mm")
+                    </div>
+                    <form asp-action="Reopen" method="post" onsubmit="return confirm('Reopen this closed day to allow transaction modifications?');">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@Model.ExistingRecord.Id" />
+                        <input type="hidden" name="date" value="@Model.ClosingDate.ToString("yyyy-MM-dd")" />
+                        <button type="submit" class="btn btn-outline-warning text-dark w-100 fw-bold">
+                            <i class="bi bi-unlock-fill me-1"></i> Reopen Closed Day (Authorized)
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold">Day Closing History</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Closing Date</th>
+                            <th class="text-end">Expected Cash</th>
+                            <th class="text-end">Actual Cash</th>
+                            <th class="text-end">Difference</th>
+                            <th>Closed By</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.PastClosings.Any())
+                        {
+                            <tr><td colspan="7" class="text-center text-muted py-4">No past day closings recorded yet.</td></tr>
+                        }
+                        @foreach (var dc in Model.PastClosings)
+                        {
+                            <tr>
+                                <td class="fw-bold">@dc.ClosingDate.ToString("yyyy-MM-dd")</td>
+                                <td class="text-end">@dc.ExpectedCash.ToString("N2")</td>
+                                <td class="text-end fw-bold">@dc.ActualCash.ToString("N2")</td>
+                                <td class="text-end @(dc.Difference == 0 ? "text-success" : "text-danger fw-bold")">@dc.Difference.ToString("N2")</td>
+                                <td>@(dc.ClosedByUser?.Username ?? "System")</td>
+                                <td>
+                                    <span class="badge @(dc.Status == "Closed" ? "bg-danger" : "bg-warning text-dark")">@dc.Status</span>
+                                </td>
+                                <td class="text-end">
+                                    <a asp-action="Index" asp-route-date="@dc.ClosingDate.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-primary py-0 px-2">View</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function recalcDayClosing() {
+        const opening = parseFloat(document.getElementById('OpeningCash')?.value) || 0;
+        const cashSales = parseFloat(document.getElementById('dcCashSales')?.getAttribute('data-val')) || 0;
+        const custPay = parseFloat(document.getElementById('dcCustPay')?.getAttribute('data-val')) || 0;
+        const expenses = parseFloat(document.getElementById('dcExpenses')?.getAttribute('data-val')) || 0;
+        const refunds = parseFloat(document.getElementById('dcRefunds')?.getAttribute('data-val')) || 0;
+        const actual = parseFloat(document.getElementById('ActualCash')?.value) || 0;
+
+        const expected = opening + cashSales + custPay - expenses - refunds;
+        const diff = actual - expected;
+
+        document.getElementById('dcExpectedCash').textContent = expected.toFixed(2);
+        const diffEl = document.getElementById('dcDifference');
+        diffEl.textContent = diff.toFixed(2);
+        diffEl.className = 'fs-5 fw-bold ' + (Math.abs(diff) < 0.01 ? 'text-success' : 'text-danger');
+    }
+</script>

@@ -1,0 +1,86 @@
+@model PaginatedList<Customer>
+@{
+    ViewData["Title"] = "Customers";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h4 class="fw-bold mb-0">Customers Directory</h4>
+        <span class="text-muted small">Default Walk-in Customer for instant counter checkout + registered credit customers</span>
+    </div>
+    @if (User.HasPermission(PermissionCodes.CreateSale))
+    {
+        <a asp-action="Create" class="btn btn-primary btn-sm fw-semibold">
+            <i class="bi bi-person-plus me-1"></i> Add Customer
+        </a>
+    }
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-9">
+                <input type="text" name="search" value="@ViewBag.Search" class="form-control form-control-sm" placeholder="Search customer by name, phone or email..." />
+            </div>
+            <div class="col-md-3 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Search</button>
+                <a asp-action="Index" class="btn btn-sm btn-outline-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Phone / Email</th>
+                    <th>Address</th>
+                    <th class="text-end">Credit Limit</th>
+                    <th class="text-end">Receivable Balance</th>
+                    <th>Status</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var c in Model)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@c.Id" class="fw-bold text-decoration-none">@c.Name</a>
+                            @if (c.IsWalkIn)
+                            {
+                                <span class="badge bg-info text-dark ms-1">System Default</span>
+                            }
+                        </td>
+                        <td>
+                            <div>@(c.Phone ?? "-")</div>
+                            <small class="text-muted">@c.Email</small>
+                        </td>
+                        <td class="small text-muted">@(c.Address ?? "-")</td>
+                        <td class="text-end">@(c.IsWalkIn ? "N/A" : c.CreditLimit.ToString("N2"))</td>
+                        <td class="text-end fw-bold @(c.CurrentBalance > 0 ? "text-danger" : "text-success")">@c.CurrentBalance.ToString("N2")</td>
+                        <td><span class="badge @(c.IsActive ? "bg-success" : "bg-secondary")">@(c.IsActive ? "Active" : "Inactive")</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a asp-action="Details" asp-route-id="@c.Id" class="btn btn-outline-primary"><i class="bi bi-journal-text"></i> Ledger</a>
+                                @if (!c.IsWalkIn)
+                                {
+                                    <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i></a>
+                                }
+                                @if (c.CurrentBalance > 0 && User.HasPermission(PermissionCodes.CreatePayment))
+                                {
+                                    <a asp-controller="Payments" asp-action="Create" asp-route-customerId="@c.Id" asp-route-paymentType="CustomerReceipt" class="btn btn-outline-success">
+                                        <i class="bi bi-cash"></i> Receive
+                                    </a>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
